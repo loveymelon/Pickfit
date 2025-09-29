@@ -11,9 +11,12 @@ import RxSwift
 final class LoginReactor: Reactor {
 
     private let loginManager: LoginManager
+    private let authRepository: AuthRepository
 
-    init(loginManager: LoginManager = LoginManager()) {
+    init(loginManager: LoginManager = LoginManager(),
+         authRepository: AuthRepository = AuthRepository()) {
         self.loginManager = loginManager
+        self.authRepository = authRepository
     }
 
     enum Action {
@@ -22,14 +25,14 @@ final class LoginReactor: Reactor {
 
     enum Mutation {
         case setLoading(Bool)
-        case setLoginSuccess(String)
+        case setLoginSuccess(AuthEntity)
         case setLoginFailure(Error)
     }
 
     struct State {
         var isLoading: Bool = false
         var isLoginSucceed: Bool? = nil
-        var accessToken: String? = nil
+        var authEntity: AuthEntity? = nil
         var errorMessage: String? = nil
     }
 
@@ -41,8 +44,11 @@ final class LoginReactor: Reactor {
             return run(
                 operation: { send in
                     send(.setLoading(true))
-                    let accessToken = try await self.loginManager.kakaoLogin()
-                    send(.setLoginSuccess(accessToken))
+                    // 1. 카카오 토큰 획득
+                    let kakaoToken = try await self.loginManager.kakaoLogin()
+                    // 2. 서버 로그인
+                    let authEntity = try await self.authRepository.loginWithKakao(oauthToken: kakaoToken)
+                    send(.setLoginSuccess(authEntity))
                 },
                 onError: { error in
                     .setLoginFailure(error)
@@ -59,16 +65,16 @@ final class LoginReactor: Reactor {
             newState.isLoading = isLoading
             newState.errorMessage = nil
 
-        case .setLoginSuccess(let accessToken):
+        case .setLoginSuccess(let authEntity):
             newState.isLoading = false
             newState.isLoginSucceed = true
-            newState.accessToken = accessToken
+            newState.authEntity = authEntity
             newState.errorMessage = nil
 
         case .setLoginFailure(let error):
             newState.isLoading = false
             newState.isLoginSucceed = false
-            newState.accessToken = nil
+            newState.authEntity = nil
             newState.errorMessage = error.localizedDescription
         }
 
