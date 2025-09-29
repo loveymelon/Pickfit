@@ -10,6 +10,12 @@ import RxSwift
 
 final class LoginReactor: Reactor {
 
+    private let loginManager: LoginManager
+
+    init(loginManager: LoginManager = LoginManager()) {
+        self.loginManager = loginManager
+    }
+
     enum Action {
         case loginButtonTapped
     }
@@ -32,7 +38,16 @@ final class LoginReactor: Reactor {
     func mutate(action: Action) -> Observable<Mutation> {
         switch action {
         case .loginButtonTapped:
-            return Observable.empty()
+            return run(
+                operation: { send in
+                    send(.setLoading(true))
+                    let accessToken = try await self.loginManager.kakaoLogin()
+                    send(.setLoginSuccess(accessToken))
+                },
+                onError: { error in
+                    .setLoginFailure(error)
+                }
+            )
         }
     }
 
