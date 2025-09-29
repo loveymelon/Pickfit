@@ -24,7 +24,6 @@ final class LoginViewController: BaseViewController<LoginView> {
     override func bind() {
         let canLogin = reactor.state.map { !$0.isLoading }.distinctUntilChanged()
         
-        print(canLogin)
         mainView.signInButton.rx.tap
             .withLatestFrom(canLogin)
             .filter { $0 }
@@ -45,10 +44,12 @@ final class LoginViewController: BaseViewController<LoginView> {
             })
             .disposed(by: disposeBag)
 
-        reactor.state.compactMap { $0.accessToken }
-            .distinctUntilChanged()
-            .subscribe(onNext: { [weak self] token in
-                print("로그인 성공: \(token)")
+        reactor.state.compactMap { $0.authEntity }
+            .distinctUntilChanged { $0.accessToken == $1.accessToken }
+            .subscribe(onNext: { [weak self] authEntity in
+                print("로그인 성공: \(authEntity.nickname)")
+                // TODO: AuthTokenStorage에 토큰 저장
+                // TODO: 메인 화면으로 이동
             })
             .disposed(by: disposeBag)
     }
