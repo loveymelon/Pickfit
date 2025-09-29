@@ -25,14 +25,13 @@ final class LoginReactor: Reactor {
 
     enum Mutation {
         case setLoading(Bool)
-        case setLoginSuccess(AuthEntity)
+        case setLoginSuccess
         case setLoginFailure(Error)
     }
 
     struct State {
         var isLoading: Bool = false
-        var isLoginSucceed: Bool? = nil
-        var authEntity: AuthEntity? = nil
+        var isLoginSucceed: Bool = false
         var errorMessage: String? = nil
     }
 
@@ -46,9 +45,9 @@ final class LoginReactor: Reactor {
                     send(.setLoading(true))
                     // 1. 카카오 토큰 획득
                     let kakaoToken = try await self.loginManager.kakaoLogin()
-                    // 2. 서버 로그인
-                    let authEntity = try await self.authRepository.loginWithKakao(oauthToken: kakaoToken)
-                    send(.setLoginSuccess(authEntity))
+                    // 2. 서버 로그인 및 토큰 저장 (Repository에서 처리)
+                    try await self.authRepository.loginWithKakao(oauthToken: kakaoToken)
+                    send(.setLoginSuccess)
                 },
                 onError: { error in
                     .setLoginFailure(error)
@@ -65,16 +64,14 @@ final class LoginReactor: Reactor {
             newState.isLoading = isLoading
             newState.errorMessage = nil
 
-        case .setLoginSuccess(let authEntity):
+        case .setLoginSuccess:
             newState.isLoading = false
             newState.isLoginSucceed = true
-            newState.authEntity = authEntity
             newState.errorMessage = nil
 
         case .setLoginFailure(let error):
             newState.isLoading = false
             newState.isLoginSucceed = false
-            newState.authEntity = nil
             newState.errorMessage = error.localizedDescription
         }
 

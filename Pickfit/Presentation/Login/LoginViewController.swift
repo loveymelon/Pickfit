@@ -44,11 +44,11 @@ final class LoginViewController: BaseViewController<LoginView> {
             })
             .disposed(by: disposeBag)
 
-        reactor.state.compactMap { $0.authEntity }
-            .distinctUntilChanged { $0.accessToken == $1.accessToken }
-            .subscribe(onNext: { [weak self] authEntity in
-                print("로그인 성공: \(authEntity.nickname)")
-                // TODO: AuthTokenStorage에 토큰 저장
+        reactor.state.map { $0.isLoginSucceed }
+            .filter { $0 }
+            .distinctUntilChanged()
+            .subscribe(onNext: { [weak self] _ in
+                print("로그인 성공")
                 // TODO: 메인 화면으로 이동
             })
             .disposed(by: disposeBag)

@@ -9,17 +9,20 @@ import Foundation
 
 final class AuthRepository {
     private let networkManager: NetworkManager
+    private let tokenStorage: AuthTokenStorage
 
-    init(networkManager: NetworkManager = NetworkManager()) {
+    init(networkManager: NetworkManager = NetworkManager(),
+         tokenStorage: AuthTokenStorage = KeychainAuthStorage()) {
         self.networkManager = networkManager
+        self.tokenStorage = tokenStorage
     }
 
-    func loginWithKakao(oauthToken: String) async throws -> AuthEntity {
+    func loginWithKakao(oauthToken: String) async throws {
         let dto = try await networkManager.fetch(
             dto: KakaoResponseDTO.self,
             router: LoginRouter.kakaoLogin(KakaoRequestDTO(oauthToken: oauthToken))
         )
 
-        return AuthMapper.dtoToEntity(dto)
+        await tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
     }
 }
