@@ -31,6 +31,18 @@ final class HomeViewController: BaseViewController<HomeView> {
             .map { HomeReactor.Action.viewDidLoad }
             .bind(to: reactor.action)
             .disposed(by: disposeBag)
+
+        reactor.state.map { $0.shouldNavigateToLogin }
+            .filter { $0 }
+            .distinctUntilChanged()
+            .subscribe(onNext: { [weak self] _ in
+                self?.navigateToLogin()
+            })
+            .disposed(by: disposeBag)
+    }
+
+    private func navigateToLogin() {
+        NotificationCenter.default.post(name: .navigateToLogin, object: nil)
     }
 }
 

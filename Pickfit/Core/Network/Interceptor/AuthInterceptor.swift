@@ -11,15 +11,10 @@ import Alamofire
 final class AuthInterceptor: RequestInterceptor {
     private let tokenStorage: AuthTokenStorage
     private let refreshCoordinator: TokenRefreshCoordinator
-    private let onLogout: @Sendable () -> Void
 
-    init(
-        tokenStorage: AuthTokenStorage = KeychainAuthStorage(),
-        onLogout: @escaping @Sendable () -> Void
-    ) {
+    init(tokenStorage: AuthTokenStorage = KeychainAuthStorage()) {
         self.tokenStorage = tokenStorage
         self.refreshCoordinator = TokenRefreshCoordinator()
-        self.onLogout = onLogout
     }
 
     // MARK: - RequestAdapter
@@ -55,14 +50,14 @@ final class AuthInterceptor: RequestInterceptor {
                     }
                     completion(.retry)
                 } catch {
-                    // RefreshToken 갱신 실패 → 로그아웃
-                    await handleLogout()
+                    // RefreshToken 갱신 실패 → 토큰 삭제 후 에러 전파
+                    await tokenStorage.clear()
                     completion(.doNotRetry)
                 }
 
             case 401, 418:
-                // 인증 불가능 또는 RefreshToken 만료 → 로그아웃
-                await handleLogout()
+                // 인증 불가능 또는 RefreshToken 만료 → 토큰 삭제 후 에러 전파
+                await tokenStorage.clear()
                 completion(.doNotRetry)
 
             default:
@@ -78,8 +73,7 @@ final class AuthInterceptor: RequestInterceptor {
             throw NSError(domain: "AuthInterceptor", code: -1, userInfo: [NSLocalizedDescriptionKey: "RefreshToken이 없습니다"])
         }
 
-        let networkManager = NetworkManager()
-        let dto = try await networkManager.fetch(
+        let dto = try await NetworkManager.auth.fetch(
             dto: RefreshTokenResponseDTO.self,
             router: LoginRouter.refreshToken(RefreshTokenRequestDTO(refreshToken: refreshToken))
         )
@@ -88,12 +82,5 @@ final class AuthInterceptor: RequestInterceptor {
         await tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
 
         return dto.accessToken
-    }
-
-    private func handleLogout() async {
-        await tokenStorage.clear()
-        await MainActor.run {
-            onLogout()
-        }
     }
 }

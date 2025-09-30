@@ -16,10 +16,12 @@ final class HomeReactor: Reactor {
 
     enum Mutation {
         case setViewDidLoad
+        case logout
     }
 
     struct State {
         var isViewLoaded: Bool = false
+        var shouldNavigateToLogin: Bool = false
     }
 
     let initialState = State()
@@ -31,12 +33,19 @@ final class HomeReactor: Reactor {
         }
     }
 
+    func transform(mutation: Observable<Mutation>) -> Observable<Mutation> {
+        return handleAuthError(mutation: mutation, logoutMutation: .logout)
+    }
+
     func reduce(state: State, mutation: Mutation) -> State {
         var newState = state
 
         switch mutation {
         case .setViewDidLoad:
             newState.isViewLoaded = true
+
+        case .logout:
+            newState.shouldNavigateToLogin = true
         }
 
         return newState

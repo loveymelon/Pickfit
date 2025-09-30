@@ -6,6 +6,7 @@
 //
 
 import ReactorKit
+import RxSwift
 
 @available(iOS 13.0, macOS 10.15, watchOS 6.0, tvOS 13.0, *)
 public extension Reactor {
@@ -62,5 +63,16 @@ public struct Send<Mutation>: Sendable {
     public func callAsFunction(_ mutation: Mutation) {
         guard !Task.isCancelled else { return }
         self.send(mutation)
+    }
+}
+
+extension Reactor {
+    func handleAuthError(mutation: Observable<Mutation>, logoutMutation: Mutation) -> Observable<Mutation> {
+        return mutation.catch { error in
+            if case NetworkError.unauthorized = error {
+                return .just(logoutMutation)
+            }
+            throw error
+        }
     }
 }

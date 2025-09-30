@@ -11,9 +11,6 @@ import KakaoSDKAuth
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
-    var authInterceptor: AuthInterceptor?
-    var networkManager: NetworkManager?
-    var authRepository: AuthRepository?
 
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
@@ -23,40 +20,36 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let scene = (scene as? UIWindowScene) else { return }
         window = UIWindow(windowScene: scene)
 
-        // AuthInterceptor 설정
-        setupAuthInterceptor()
-
-        // 초기 화면 설정
-        window?.rootViewController = LoginViewController(authRepository: authRepository!)
-        window?.makeKeyAndVisible()
-
-        // 토큰 확인 후 탭바로 전환
+        // 토큰 확인 후 초기 화면 설정
         Task {
             let storage = KeychainAuthStorage()
-            if let _ = await storage.readAccess() {
-                await MainActor.run {
-                    let tabBarController = MainTabBarController()
-                    self.window?.rootViewController = tabBarController
+            let hasToken = await storage.readAccess() != nil
+
+            await MainActor.run {
+                if hasToken {
+                    // 토큰이 있으면 탭바로
+                    window?.rootViewController = MainTabBarController()
+                } else {
+                    // 토큰이 없으면 로그인 화면으로
+                    window?.rootViewController = LoginViewController()
                 }
+                window?.makeKeyAndVisible()
             }
         }
+
+        // 로그아웃 Notification 구독
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleNavigateToLogin),
+            name: .navigateToLogin,
+            object: nil
+        )
     }
 
-    private func setupAuthInterceptor() {
-        authInterceptor = AuthInterceptor { [weak self] in
-            self?.handleLogout()
-        }
-
-        // Interceptor가 주입된 NetworkManager 생성
-        networkManager = NetworkManager(interceptor: authInterceptor)
-
-        // AuthRepository 생성 (Interceptor가 주입된 NetworkManager 전달)
-        authRepository = AuthRepository(networkManager: networkManager!)
-    }
-
-    private func handleLogout() {
-        window?.rootViewController = LoginViewController(authRepository: authRepository!)
-        UIView.transition(with: window!, duration: 0.3, options: .transitionCrossDissolve, animations: nil)
+    @objc private func handleNavigateToLogin() {
+        guard let window = window else { return }
+        window.rootViewController = LoginViewController()
+        UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: nil)
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
@@ -72,6 +65,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // This occurs shortly after the scene enters the background, or when its session is discarded.
         // Release any resources associated with this scene that can be re-created the next time the scene connects.
         // The scene may re-connect later, as its session was not necessarily discarded (see `application:didDiscardSceneSessions` instead).
+        NotificationCenter.default.removeObserver(self)
     }
 
     func sceneDidBecomeActive(_ scene: UIScene) {

@@ -8,19 +8,14 @@
 import Foundation
 
 final class AuthRepository {
-    private let networkManager: NetworkManager
-    private let authNetworkManager: NetworkManager
     private let tokenStorage: AuthTokenStorage
 
-    init(networkManager: NetworkManager = NetworkManager(),
-         tokenStorage: AuthTokenStorage = KeychainAuthStorage()) {
-        self.networkManager = networkManager
-        self.authNetworkManager = NetworkManager()
+    init(tokenStorage: AuthTokenStorage = KeychainAuthStorage()) {
         self.tokenStorage = tokenStorage
     }
 
     func loginWithKakao(oauthToken: String) async throws {
-        let dto = try await authNetworkManager.fetch(
+        let dto = try await NetworkManager.auth.fetch(
             dto: KakaoResponseDTO.self,
             router: LoginRouter.kakaoLogin(KakaoRequestDTO(oauthToken: oauthToken))
         )
@@ -33,7 +28,7 @@ final class AuthRepository {
             throw NSError(domain: "AuthRepository", code: -1, userInfo: [NSLocalizedDescriptionKey: "RefreshToken이 없습니다"])
         }
 
-        let dto = try await authNetworkManager.fetch(
+        let dto = try await NetworkManager.auth.fetch(
             dto: RefreshTokenResponseDTO.self,
             router: LoginRouter.refreshToken(RefreshTokenRequestDTO(refreshToken: refreshToken))
         )

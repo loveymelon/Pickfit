@@ -9,10 +9,13 @@ import Alamofire
 import Foundation
 
 actor NetworkManager {
-    private let interceptor: RequestInterceptor?
+    static let shared: NetworkManager = NetworkManager(hasInterceptor: true)
+    static let auth: NetworkManager = NetworkManager(hasInterceptor: false)
 
-    init(interceptor: RequestInterceptor? = nil) {
-        self.interceptor = interceptor
+    private let interceptor: AuthInterceptor?
+
+    private init(hasInterceptor: Bool) {
+        self.interceptor = hasInterceptor ? AuthInterceptor() : nil
     }
 
     func fetch<T: DTO, R: Router>(dto: T.Type, router: R) async throws -> T {
@@ -49,7 +52,14 @@ extension NetworkManager {
 
         case let .failure(error):
             print("error", error.localizedDescription)
-            throw error
+
+            // 401, 418 에러는 NetworkError.unauthorized로 변환
+            if let statusCode = response.response?.statusCode,
+               statusCode == 401 || statusCode == 418 {
+                throw NetworkError.unauthorized
+            }
+
+            throw NetworkError.serverError(error)
         }
     }
 }
