@@ -1,15 +1,11 @@
 //
-//  KakaoDTO.swift
+//  KakaoResponseDTO.swift
 //  Pickfit
 //
-//  Created by 김진수 on 9/29/25.
+//  Created by 김진수 on 9/30/25.
 //
 
 import Foundation
-
-struct KakaoRequestDTO: DTO, Encodable {
-    let oauthToken: String
-}
 
 struct KakaoResponseDTO: DTO {
     let userId: String

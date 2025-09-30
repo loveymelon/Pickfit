@@ -10,6 +10,7 @@ import Alamofire
 
 enum LoginRouter: Router {
     case kakaoLogin(KakaoRequestDTO)
+    case refreshToken(RefreshTokenRequestDTO)
 }
 
 extension LoginRouter {
@@ -17,6 +18,8 @@ extension LoginRouter {
         switch self {
         case .kakaoLogin:
             return .post
+        case .refreshToken:
+            return .get
         }
     }
 
@@ -24,12 +27,19 @@ extension LoginRouter {
         switch self {
         case .kakaoLogin:
             return "/users/login/kakao"
+        case .refreshToken:
+            return "/auth/refresh"
         }
     }
 
     var optionalHeaders: HTTPHeaders? {
         switch self {
         case .kakaoLogin:
+            return HTTPHeaders([
+                HTTPHeader(name: "SeSACKey", value: APIKey.sesacKey),
+                HTTPHeader(name: "accept", value: "application/json")
+            ])
+        case .refreshToken:
             return HTTPHeaders([
                 HTTPHeader(name: "SeSACKey", value: APIKey.sesacKey),
                 HTTPHeader(name: "accept", value: "application/json")
@@ -41,6 +51,8 @@ extension LoginRouter {
         switch self {
         case .kakaoLogin:
             return nil
+        case let .refreshToken(requestDTO):
+            return ["refreshToken": requestDTO.refreshToken]
         }
     }
 
@@ -48,6 +60,8 @@ extension LoginRouter {
         switch self {
         case let .kakaoLogin(requestDTO):
             return requestToBody(requestDTO)
+        case .refreshToken:
+            return nil
         }
     }
 
@@ -55,6 +69,8 @@ extension LoginRouter {
         switch self {
         case .kakaoLogin:
             return .json
+        case .refreshToken:
+            return .url
         }
     }
 }
