@@ -20,8 +20,20 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let scene = (scene as? UIWindowScene) else { return }
         window = UIWindow(windowScene: scene)
 
+        // 초기 화면 설정
         window?.rootViewController = LoginViewController()
         window?.makeKeyAndVisible()
+
+        // 토큰 확인 후 탭바로 전환
+        Task {
+            let storage = KeychainAuthStorage()
+            if let _ = await storage.readAccess() {
+                await MainActor.run {
+                    let tabBarController = MainTabBarController()
+                    self.window?.rootViewController = tabBarController
+                }
+            }
+        }
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {

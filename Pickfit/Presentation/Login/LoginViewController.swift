@@ -48,8 +48,7 @@ final class LoginViewController: BaseViewController<LoginView> {
             .filter { $0 }
             .distinctUntilChanged()
             .subscribe(onNext: { [weak self] _ in
-                print("로그인 성공")
-                // TODO: 메인 화면으로 이동
+                self?.navigateToHome()
             })
             .disposed(by: disposeBag)
     }
@@ -58,6 +57,17 @@ final class LoginViewController: BaseViewController<LoginView> {
         let alert = UIAlertController(title: "로그인 오류", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "확인", style: .default))
         present(alert, animated: true)
+    }
+
+    private func navigateToHome() {
+        let tabBarController = MainTabBarController()
+        tabBarController.modalPresentationStyle = .fullScreen
+
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            window.rootViewController = tabBarController
+            UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: nil)
+        }
     }
 }
 

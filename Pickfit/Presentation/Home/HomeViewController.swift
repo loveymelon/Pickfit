@@ -23,7 +23,6 @@ final class HomeViewController: BaseViewController<HomeView> {
         mainView.collectionView.dataSource = self
         mainView.collectionView.setCollectionViewLayout(makeCollectionView(), animated: false)
 
-        // ViewDidLoad 액션 전송
         reactor.action.onNext(.viewDidLoad)
     }
 
