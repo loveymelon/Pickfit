@@ -22,15 +22,15 @@ final class HomeViewController: BaseViewController<HomeView> {
         mainView.collectionView.delegate = self
         mainView.collectionView.dataSource = self
         mainView.collectionView.setCollectionViewLayout(makeCollectionView(), animated: false)
-
-        reactor.action.onNext(.viewDidLoad)
     }
 
     override func bind() {
         super.bind()
 
-        // 필요시 여기서 추가 바인딩
-        // 예: 화면 전환, 데이터 로딩 등
+        rx.viewDidLoad
+            .map { HomeReactor.Action.viewDidLoad }
+            .bind(to: reactor.action)
+            .disposed(by: disposeBag)
     }
 }
 
