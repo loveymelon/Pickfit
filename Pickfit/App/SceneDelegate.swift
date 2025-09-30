@@ -11,6 +11,9 @@ import KakaoSDKAuth
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
+    var authInterceptor: AuthInterceptor?
+    var networkManager: NetworkManager?
+    var authRepository: AuthRepository?
 
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
@@ -20,8 +23,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let scene = (scene as? UIWindowScene) else { return }
         window = UIWindow(windowScene: scene)
 
+        // AuthInterceptor 설정
+        setupAuthInterceptor()
+
         // 초기 화면 설정
-        window?.rootViewController = LoginViewController()
+        window?.rootViewController = LoginViewController(authRepository: authRepository!)
         window?.makeKeyAndVisible()
 
         // 토큰 확인 후 탭바로 전환
@@ -34,6 +40,23 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                 }
             }
         }
+    }
+
+    private func setupAuthInterceptor() {
+        authInterceptor = AuthInterceptor { [weak self] in
+            self?.handleLogout()
+        }
+
+        // Interceptor가 주입된 NetworkManager 생성
+        networkManager = NetworkManager(interceptor: authInterceptor)
+
+        // AuthRepository 생성 (Interceptor가 주입된 NetworkManager 전달)
+        authRepository = AuthRepository(networkManager: networkManager!)
+    }
+
+    private func handleLogout() {
+        window?.rootViewController = LoginViewController(authRepository: authRepository!)
+        UIView.transition(with: window!, duration: 0.3, options: .transitionCrossDissolve, animations: nil)
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {

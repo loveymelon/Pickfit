@@ -14,7 +14,16 @@ final class LoginViewController: BaseViewController<LoginView> {
 
     var disposeBag = DisposeBag()
 
-    private let reactor = LoginReactor()
+    private let reactor: LoginReactor
+
+    init(authRepository: AuthRepository) {
+        self.reactor = LoginReactor(authRepository: authRepository)
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
