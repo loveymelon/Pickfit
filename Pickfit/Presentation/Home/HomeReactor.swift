@@ -33,6 +33,7 @@ final class HomeReactor: Reactor {
         var isViewLoaded: Bool = false
         var isLoading: Bool = false
         var stores: [StoreResponseDTO.Store] = []
+        var categories: [Category] = Category.allCases
         var nextCursor: String = ""
         var errorMessage: String? = nil
         var shouldNavigateToLogin: Bool = false

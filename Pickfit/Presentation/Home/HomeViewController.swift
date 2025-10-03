@@ -9,6 +9,7 @@ import UIKit
 import RxSwift
 import RxCocoa
 import ReactorKit
+import RxDataSources
 
 final class HomeViewController: BaseViewController<HomeView> {
 
@@ -43,15 +44,40 @@ final class HomeViewController: BaseViewController<HomeView> {
             })
             .disposed(by: disposeBag)
 
-        reactor.state.map { $0.stores }
-            .distinctUntilChanged()
-            .bind(to: mainView.collectionView.rx.items(
-                cellIdentifier: HomeMainCell.identifier,
-                cellType: HomeMainCell.self
-            )) { index, store, cell in
-                cell.configure(with: store)
+        let dataSource = RxCollectionViewSectionedReloadDataSource<HomeSectionModel>(
+            configureCell: { dataSource, collectionView, indexPath, item in
+                switch item {
+                case .store(let store):
+                    guard let cell = collectionView.dequeueReusableCell(
+                        withReuseIdentifier: HomeMainCell.identifier,
+                        for: indexPath
+                    ) as? HomeMainCell else { return UICollectionViewCell() }
+                    cell.configure(with: store)
+                    return cell
+
+                case .category(let category):
+                    guard let cell = collectionView.dequeueReusableCell(
+                        withReuseIdentifier: HomeCategoryCell.identifier,
+                        for: indexPath
+                    ) as? HomeCategoryCell else { return UICollectionViewCell() }
+                    cell.configure(with: category)
+                    return cell
+                }
             }
-            .disposed(by: disposeBag)
+        )
+
+        Observable.combineLatest(
+            reactor.state.map { $0.stores }.distinctUntilChanged(),
+            reactor.state.map { $0.categories }.distinctUntilChanged()
+        )
+        .map { stores, categories -> [HomeSectionModel] in
+            return [
+                .main(stores),
+                .category(categories)
+            ]
+        }
+        .bind(to: mainView.collectionView.rx.items(dataSource: dataSource))
+        .disposed(by: disposeBag)
     }
 
     private func navigateToLogin() {
@@ -76,6 +102,9 @@ extension HomeViewController {
         switch sectionIndex {
         case 0:
             return createMainSection()
+            
+        case 1:
+            return createCategorySection()
         default:
             assertionFailure("Unexpected section index: \(sectionIndex)")
             return createMainSection() // fallback
@@ -105,6 +134,21 @@ extension HomeViewController {
         section.interGroupSpacing = 0
         section.contentInsets = .zero
         
+        return section
+    }
+    
+    private func createCategorySection() -> NSCollectionLayoutSection {
+        let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(1.0))
+        let item = NSCollectionLayoutItem(layoutSize: itemSize)
+
+        let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(0.22), heightDimension: .fractionalHeight(0.13))
+        let group = NSCollectionLayoutGroup.vertical(layoutSize: groupSize, subitems: [item])
+
+        let section = NSCollectionLayoutSection(group: group)
+        section.orthogonalScrollingBehavior = .continuous
+        section.interGroupSpacing = 12
+        section.contentInsets = .init(top: 0, leading: 16, bottom: 0, trailing: 16)
+
         return section
     }
 }
