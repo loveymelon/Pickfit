@@ -10,17 +10,31 @@ import RxSwift
 
 final class HomeReactor: Reactor {
 
+    private let storeRepository: StoreRepository
+
+    init(storeRepository: StoreRepository = StoreRepository()) {
+        self.storeRepository = storeRepository
+    }
+
     enum Action {
         case viewDidLoad
+        case viewIsAppearing
     }
 
     enum Mutation {
         case setViewDidLoad
+        case setLoading(Bool)
+        case setStores(StoreResponseDTO)
+        case setError(Error)
         case logout
     }
 
     struct State {
         var isViewLoaded: Bool = false
+        var isLoading: Bool = false
+        var stores: [StoreResponseDTO.Store] = []
+        var nextCursor: String = ""
+        var errorMessage: String? = nil
         var shouldNavigateToLogin: Bool = false
     }
 
@@ -30,6 +44,23 @@ final class HomeReactor: Reactor {
         switch action {
         case .viewDidLoad:
             return Observable.just(.setViewDidLoad)
+
+        case .viewIsAppearing:
+            return run(
+                operation: { send in
+                    send(.setLoading(true))
+                    let response = try await self.storeRepository.fetchStores(
+                        category: "Sport",
+                        longitude: 127.0,
+                        latitude: 37.5,
+                        orderBy: .distance
+                    )
+                    send(.setStores(response))
+                },
+                onError: { error in
+                    .setError(error)
+                }
+            )
         }
     }
 
@@ -43,6 +74,20 @@ final class HomeReactor: Reactor {
         switch mutation {
         case .setViewDidLoad:
             newState.isViewLoaded = true
+
+        case .setLoading(let isLoading):
+            newState.isLoading = isLoading
+            newState.errorMessage = nil
+
+        case .setStores(let response):
+            newState.isLoading = false
+            newState.stores = response.data
+            newState.nextCursor = response.nextCursor
+            newState.errorMessage = nil
+
+        case .setError(let error):
+            newState.isLoading = false
+            newState.errorMessage = error.localizedDescription
 
         case .logout:
             newState.shouldNavigateToLogin = true

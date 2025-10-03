@@ -54,7 +54,7 @@ extension StoreRouter {
     var encodingType: EncodingType {
         switch self {
         case .fetchStore:
-            return .json
+            return .url
         }
     }
 }

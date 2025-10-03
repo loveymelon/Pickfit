@@ -32,11 +32,23 @@ final class HomeViewController: BaseViewController<HomeView> {
             .bind(to: reactor.action)
             .disposed(by: disposeBag)
 
+        rx.viewIsAppearing
+            .map { HomeReactor.Action.viewIsAppearing }
+            .bind(to: reactor.action)
+            .disposed(by: disposeBag)
+
         reactor.state.map { $0.shouldNavigateToLogin }
             .filter { $0 }
             .distinctUntilChanged()
             .subscribe(onNext: { [weak self] _ in
                 self?.navigateToLogin()
+            })
+            .disposed(by: disposeBag)
+
+        reactor.state.map { $0.stores }
+            .distinctUntilChanged()
+            .subscribe(onNext: { [weak self] _ in
+                self?.mainView.collectionView.reloadData()
             })
             .disposed(by: disposeBag)
     }
