@@ -10,7 +10,7 @@ import Foundation
 final class AuthRepository {
     private let tokenStorage: AuthTokenStorage
 
-    init(tokenStorage: AuthTokenStorage = KeychainAuthStorage()) {
+    init(tokenStorage: AuthTokenStorage = KeychainAuthStorage.shared) {
         self.tokenStorage = tokenStorage
     }
 

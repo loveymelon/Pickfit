@@ -33,7 +33,6 @@ extension NetworkManager {
     private func getResponse<T: DTO>(dto: T.Type, request: URLRequest) async -> DataResponse<T, AFError> {
         if let interceptor = interceptor {
             return await AF.request(request, interceptor: interceptor)
-                .validate(statusCode: 200..<300)
                 .serializingDecodable(T.self)
                 .response
         } else {
@@ -47,12 +46,9 @@ extension NetworkManager {
     private func getResult<T: DTO>(dto: T.Type, response: DataResponse<T, AFError>) throws -> T {
         switch response.result {
         case let .success(data):
-            print("success", data)
             return data
 
         case let .failure(error):
-            print("error", error.localizedDescription)
-
             // 401, 418 에러는 NetworkError.unauthorized로 변환
             if let statusCode = response.response?.statusCode,
                statusCode == 401 || statusCode == 418 {

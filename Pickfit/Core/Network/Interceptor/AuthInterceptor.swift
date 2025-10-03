@@ -12,7 +12,7 @@ final class AuthInterceptor: RequestInterceptor {
     private let tokenStorage: AuthTokenStorage
     private let refreshCoordinator: TokenRefreshCoordinator
 
-    init(tokenStorage: AuthTokenStorage = KeychainAuthStorage()) {
+    init(tokenStorage: AuthTokenStorage = KeychainAuthStorage.shared) {
         self.tokenStorage = tokenStorage
         self.refreshCoordinator = TokenRefreshCoordinator()
     }
@@ -24,7 +24,7 @@ final class AuthInterceptor: RequestInterceptor {
 
             // AccessToken을 헤더에 추가
             if let accessToken = await tokenStorage.readAccess() {
-                request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+                request.setValue(accessToken, forHTTPHeaderField: "Authorization")
             }
 
             completion(.success(request))

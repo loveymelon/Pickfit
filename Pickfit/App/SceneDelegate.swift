@@ -22,8 +22,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         // 토큰 확인 후 초기 화면 설정
         Task {
-            let storage = KeychainAuthStorage()
-            let hasToken = await storage.readAccess() != nil
+            let hasToken = await KeychainAuthStorage.shared.readAccess() != nil
 
             await MainActor.run {
                 if hasToken {

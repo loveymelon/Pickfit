@@ -43,30 +43,30 @@ enum KeyChainKeys: String {
 }
 
 actor KeychainAuthStorage: AuthTokenStorage {
-    @KeychainValue(key: .accessToken)
-    private var accessToken: String?
+    static let shared = KeychainAuthStorage()
 
-    @KeychainValue(key: .refreshToken)
-    private var refreshToken: String?
+    private let keychain = KeychainSwift()
+
+    private init() {}
 
     func readAccess() async -> String? {
-        accessToken
+        keychain.get(KeyChainKeys.accessToken.rawValue)
     }
 
     func readRefresh() async -> String? {
-        refreshToken
+        keychain.get(KeyChainKeys.refreshToken.rawValue)
     }
 
     func write(access: String, refresh: String?) async {
-        accessToken = access
+        keychain.set(access, forKey: KeyChainKeys.accessToken.rawValue)
 
         if let r = refresh {
-            refreshToken = r
+            keychain.set(r, forKey: KeyChainKeys.refreshToken.rawValue)
         }
     }
 
     func clear() async {
-        accessToken = nil
-        refreshToken = nil
+        keychain.delete(KeyChainKeys.accessToken.rawValue)
+        keychain.delete(KeyChainKeys.refreshToken.rawValue)
     }
 }
