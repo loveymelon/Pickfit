@@ -13,7 +13,6 @@ import Kingfisher
 final class ImageLoadView: UIView {
     private let imageView = UIImageView().then {
         $0.clipsToBounds = true
-        $0.contentMode = .scaleAspectFill
         $0.backgroundColor = .systemGray6
     }
 
@@ -45,7 +44,7 @@ final class ImageLoadView: UIView {
     private var currentImageURL: String?
     private let downsamplingSize: CGSize
 
-    init(cornerRadius: CGFloat = 0) {
+    init(cornerRadius: CGFloat = 0, contentMode: UIView.ContentMode = .scaleAspectFill) {
         // 디바이스 width × height/2 크기로 다운샘플링
         let screenWidth = UIScreen.main.bounds.width
         let screenHeight = UIScreen.main.bounds.height
@@ -54,6 +53,7 @@ final class ImageLoadView: UIView {
         super.init(frame: .zero)
 
         imageView.layer.cornerRadius = cornerRadius
+        imageView.contentMode = contentMode
         configureUI()
         setupActions()
     }
