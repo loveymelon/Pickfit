@@ -19,8 +19,6 @@ final class HomeViewController: BaseViewController<HomeView> {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        mainView.collectionView.delegate = self
-        mainView.collectionView.dataSource = self
         mainView.collectionView.setCollectionViewLayout(makeCollectionView(), animated: false)
     }
 
@@ -47,38 +45,17 @@ final class HomeViewController: BaseViewController<HomeView> {
 
         reactor.state.map { $0.stores }
             .distinctUntilChanged()
-            .subscribe(onNext: { [weak self] _ in
-                self?.mainView.collectionView.reloadData()
-            })
+            .bind(to: mainView.collectionView.rx.items(
+                cellIdentifier: HomeMainCell.identifier,
+                cellType: HomeMainCell.self
+            )) { index, store, cell in
+                cell.configure(with: store)
+            }
             .disposed(by: disposeBag)
     }
 
     private func navigateToLogin() {
         NotificationCenter.default.post(name: .navigateToLogin, object: nil)
-    }
-}
-
-extension HomeViewController: UICollectionViewDelegate, UICollectionViewDataSource {
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        switch section {
-        case 0:
-            return 3
-            
-        default:
-            return 0
-        }
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        switch indexPath.section {
-        case 0:
-            guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: HomeMainCell.identifier, for: indexPath) as? HomeMainCell else { return UICollectionViewCell(frame: .zero) }
-            
-            return cell
-            
-        default:
-            return UICollectionViewCell(frame: .zero)
-        }
     }
 }
 

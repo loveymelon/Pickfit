@@ -10,20 +10,25 @@ import Then
 import SnapKit
 
 final class HomeMainCell: UICollectionViewCell {
-    let storeImageView = UIImageView().then {
-        $0.clipsToBounds = true
-        $0.contentMode = .scaleToFill
-        $0.layer.cornerRadius = 20
-    }
-    
+    private let imageLoadView = ImageLoadView(cornerRadius: 20)
+
     override init(frame: CGRect) {
         super.init(frame: frame)
-        
+
         configureUI()
     }
-    
+
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        imageLoadView.cancelLoading()
+    }
+
+    func configure(with store: StoreResponseDTO.Store) {
+        imageLoadView.loadImage(from: store.storeImageUrls.first)
     }
 }
 
@@ -32,13 +37,13 @@ extension HomeMainCell: UIConfigureProtocol {
         configureHierarchy()
         configureLayout()
     }
-    
+
     func configureHierarchy() {
-        contentView.addSubview(storeImageView)
+        contentView.addSubview(imageLoadView)
     }
-    
+
     func configureLayout() {
-        storeImageView.snp.makeConstraints {
+        imageLoadView.snp.makeConstraints {
             $0.edges.equalToSuperview()
         }
     }
