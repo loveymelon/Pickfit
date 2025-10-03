@@ -10,6 +10,7 @@ import RxDataSources
 enum HomeSectionModel {
     case main([StoreResponseDTO.Store])
     case category([Category])
+    case banner([BannerResponseDTO.Banner])
 }
 
 extension HomeSectionModel: SectionModelType {
@@ -21,6 +22,8 @@ extension HomeSectionModel: SectionModelType {
             return stores.map { .store($0) }
         case .category(let categories):
             return categories.map { .category($0) }
+        case .banner(let banners):
+            return banners.map { .banner($0) }
         }
     }
 
@@ -42,6 +45,14 @@ extension HomeSectionModel: SectionModelType {
                 return nil
             }
             self = .category(categories)
+        case .banner:
+            let banners = items.compactMap { item -> BannerResponseDTO.Banner? in
+                if case .banner(let banner) = item {
+                    return banner
+                }
+                return nil
+            }
+            self = .banner(banners)
         }
     }
 }
@@ -49,4 +60,5 @@ extension HomeSectionModel: SectionModelType {
 enum HomeSectionItem {
     case store(StoreResponseDTO.Store)
     case category(Category)
+    case banner(BannerResponseDTO.Banner)
 }

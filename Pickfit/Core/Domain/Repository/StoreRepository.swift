@@ -32,4 +32,13 @@ final class StoreRepository {
 
         return dto
     }
+
+    func fetchBanners() async throws -> BannerResponseDTO {
+        let dto = try await NetworkManager.shared.fetch(
+            dto: BannerResponseDTO.self,
+            router: StoreRouter.fetchBanner
+        )
+
+        return dto
+    }
 }

@@ -1,5 +1,5 @@
 //
-//  CategoryCell.swift
+//  HomeCategoryCell.swift
 //  Pickfit
 //
 //  Created by 김진수 on 10/4/25.
@@ -9,7 +9,7 @@ import UIKit
 import SnapKit
 import Then
 
-final class CategoryCell: UICollectionViewCell {
+final class HomeCategoryCell: UICollectionViewCell {
     private let imageView = UIImageView().then {
         $0.contentMode = .scaleAspectFill
         $0.clipsToBounds = true

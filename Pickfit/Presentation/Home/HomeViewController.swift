@@ -62,18 +62,28 @@ final class HomeViewController: BaseViewController<HomeView> {
                     ) as? HomeCategoryCell else { return UICollectionViewCell() }
                     cell.configure(with: category)
                     return cell
+
+                case .banner(let banner):
+                    guard let cell = collectionView.dequeueReusableCell(
+                        withReuseIdentifier: HomeBannerCell.identifier,
+                        for: indexPath
+                    ) as? HomeBannerCell else { return UICollectionViewCell() }
+                    cell.configure(with: banner)
+                    return cell
                 }
             }
         )
 
         Observable.combineLatest(
             reactor.state.map { $0.stores }.distinctUntilChanged(),
-            reactor.state.map { $0.categories }.distinctUntilChanged()
+            reactor.state.map { $0.categories }.distinctUntilChanged(),
+            reactor.state.map { $0.banners }.distinctUntilChanged()
         )
-        .map { stores, categories -> [HomeSectionModel] in
+        .map { stores, categories, banners -> [HomeSectionModel] in
             return [
                 .main(stores),
-                .category(categories)
+                .category(categories),
+                .banner(banners)
             ]
         }
         .bind(to: mainView.collectionView.rx.items(dataSource: dataSource))
@@ -105,6 +115,10 @@ extension HomeViewController {
             
         case 1:
             return createCategorySection()
+            
+        case 2:
+            return createBannerSection()
+            
         default:
             assertionFailure("Unexpected section index: \(sectionIndex)")
             return createMainSection() // fallback
@@ -149,6 +163,20 @@ extension HomeViewController {
         section.interGroupSpacing = 12
         section.contentInsets = .init(top: 0, leading: 16, bottom: 0, trailing: 16)
 
+        return section
+    }
+    
+    private func createBannerSection() -> NSCollectionLayoutSection {
+        let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(1.0))
+        let item = NSCollectionLayoutItem(layoutSize: itemSize)
+        item.contentInsets = .init(top: 0, leading: 10, bottom: 0, trailing: 10)
+        
+        let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(0.15))
+        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
+        
+        let section = NSCollectionLayoutSection(group: group)
+        section.orthogonalScrollingBehavior = .groupPaging
+        
         return section
     }
 }

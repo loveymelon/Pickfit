@@ -25,6 +25,7 @@ final class HomeReactor: Reactor {
         case setViewDidLoad
         case setLoading(Bool)
         case setStores(StoreResponseDTO)
+        case setBanners(BannerResponseDTO)
         case setError(Error)
         case logout
     }
@@ -34,6 +35,7 @@ final class HomeReactor: Reactor {
         var isLoading: Bool = false
         var stores: [StoreResponseDTO.Store] = []
         var categories: [Category] = Category.allCases
+        var banners: [BannerResponseDTO.Banner] = []
         var nextCursor: String = ""
         var errorMessage: String? = nil
         var shouldNavigateToLogin: Bool = false
@@ -50,13 +52,19 @@ final class HomeReactor: Reactor {
             return run(
                 operation: { send in
                     send(.setLoading(true))
-                    let response = try await self.storeRepository.fetchStores(
+
+                    async let storesResponse = self.storeRepository.fetchStores(
                         category: "Sport",
                         longitude: 127.0,
                         latitude: 37.5,
                         orderBy: .distance
                     )
-                    send(.setStores(response))
+                    async let bannersResponse = self.storeRepository.fetchBanners()
+
+                    let (stores, banners) = try await (storesResponse, bannersResponse)
+
+                    send(.setStores(stores))
+                    send(.setBanners(banners))
                 },
                 onError: { error in
                     .setError(error)
@@ -85,6 +93,9 @@ final class HomeReactor: Reactor {
             newState.stores = response.data
             newState.nextCursor = response.nextCursor
             newState.errorMessage = nil
+
+        case .setBanners(let response):
+            newState.banners = response.data
 
         case .setError(let error):
             newState.isLoading = false

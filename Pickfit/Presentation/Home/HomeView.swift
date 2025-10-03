@@ -13,7 +13,8 @@ final class HomeView: BaseView {
     let collectionView = UICollectionView(frame: .zero, collectionViewLayout: UICollectionViewFlowLayout()).then {
         $0.backgroundColor = .white
         $0.register(HomeMainCell.self, forCellWithReuseIdentifier: HomeMainCell.identifier)
-        $0.register(CategoryCell.self, forCellWithReuseIdentifier: CategoryCell.identifier)
+        $0.register(HomeCategoryCell.self, forCellWithReuseIdentifier: HomeCategoryCell.identifier)
+        $0.register(HomeBannerCell.self, forCellWithReuseIdentifier: HomeBannerCell.identifier)
     }
     
     override init(frame: CGRect) {
