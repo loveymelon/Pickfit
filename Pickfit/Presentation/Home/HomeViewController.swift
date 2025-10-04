@@ -20,7 +20,13 @@ final class HomeViewController: BaseViewController<HomeView> {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        setupNavigationBar()
         mainView.collectionView.setCollectionViewLayout(makeCollectionView(), animated: false)
+    }
+
+    private func setupNavigationBar() {
+        navigationItem.leftBarButtonItem = UIBarButtonItem(customView: mainView.titleLabel)
+        navigationItem.rightBarButtonItem = UIBarButtonItem(customView: mainView.searchButton)
     }
 
     override func bind() {
