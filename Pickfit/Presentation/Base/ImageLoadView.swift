@@ -89,7 +89,7 @@ final class ImageLoadView: UIView {
         // 토큰을 먼저 가져온 후 이미지 로드
         Task {
             let accessToken = await KeychainAuthStorage.shared.readAccess()
-            await loadImageWithToken(url: url, accessToken: accessToken)
+            loadImageWithToken(url: url, accessToken: accessToken)
         }
     }
 
@@ -124,11 +124,57 @@ final class ImageLoadView: UIView {
                 switch result {
                 case .success:
                     self?.errorView.isHidden = true
-                case .failure:
-                    self?.showError()
+                case .failure(let error):
+                    self?.handleImageLoadError(error, url: url)
                 }
             }
         )
+    }
+
+    @MainActor
+    private func handleImageLoadError(_ error: KingfisherError, url: URL) {
+        // 419 에러인지 확인 (토큰 만료)
+        if case .responseError(let reason) = error,
+           case .invalidHTTPStatusCode(let response) = reason,
+           response.statusCode == 419 {
+            print("❌ [Image] 419 - Token expired for image: \(url.lastPathComponent)")
+            // 토큰 갱신 후 재시도
+            Task {
+                do {
+                    print("🔄 [Image] Starting token refresh for image...")
+                    _ = try await TokenRefreshCoordinator.shared.refresh {
+                        try await self.refreshToken()
+                    }
+                    print("✅ [Image] Token refresh successful - Retrying image load")
+                    // 토큰 갱신 성공 - 이미지 다시 로드
+                    self.loadImage(from: self.currentImageURL)
+                } catch {
+                    print("❌ [Image] Token refresh failed: \(error.localizedDescription)")
+                    // 토큰 갱신 실패 - 에러 표시
+                    self.showError()
+                }
+            }
+        } else {
+            print("❌ [Image] Load failed: \(error.localizedDescription)")
+            // 다른 에러 - 에러 표시
+            self.showError()
+        }
+    }
+
+    private func refreshToken() async throws -> String {
+        guard let refreshToken = await KeychainAuthStorage.shared.readRefresh() else {
+            throw NSError(domain: "ImageLoadView", code: -1, userInfo: [NSLocalizedDescriptionKey: "RefreshToken이 없습니다"])
+        }
+
+        let dto = try await NetworkManager.auth.fetch(
+            dto: RefreshTokenResponseDTO.self,
+            router: LoginRouter.refreshToken(RefreshTokenRequestDTO(refreshToken: refreshToken))
+        )
+
+        // 새 토큰 저장
+        await KeychainAuthStorage.shared.write(access: dto.accessToken, refresh: dto.refreshToken)
+
+        return dto.accessToken
     }
 
     func cancelLoading() {

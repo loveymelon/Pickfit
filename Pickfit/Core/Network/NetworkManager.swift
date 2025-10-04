@@ -50,9 +50,17 @@ extension NetworkManager {
 
         case let .failure(error):
             // 401, 418 에러는 NetworkError.unauthorized로 변환
-            if let statusCode = response.response?.statusCode,
-               statusCode == 401 || statusCode == 418 {
-                throw NetworkError.unauthorized
+            if let statusCode = response.response?.statusCode {
+                print("❌ [Network] Request failed - Status: \(statusCode), URL: \(response.request?.url?.path ?? "unknown")")
+                if let data = response.data, let errorMessage = String(data: data, encoding: .utf8) {
+                    print("❌ [Network] Error response: \(errorMessage)")
+                }
+
+                if statusCode == 401 || statusCode == 418 {
+                    throw NetworkError.unauthorized
+                }
+            } else {
+                print("❌ [Network] Request failed - No status code, Error: \(error.localizedDescription)")
             }
 
             throw NetworkError.serverError(error)

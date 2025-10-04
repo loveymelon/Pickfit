@@ -51,10 +51,11 @@ final class HomeReactor: Reactor {
         case .viewIsAppearing:
             return run(
                 operation: { send in
+                    print("📡 [API] HomeReactor - Starting API calls")
                     send(.setLoading(true))
 
                     async let storesResponse = self.storeRepository.fetchStores(
-                        category: "Sport",
+                        category: "Modern",
                         longitude: 127.0,
                         latitude: 37.5,
                         orderBy: .distance
@@ -63,11 +64,14 @@ final class HomeReactor: Reactor {
 
                     let (stores, banners) = try await (storesResponse, bannersResponse)
 
+                    print("✅ [API] Stores received: \(stores.data.count) items")
+                    print("✅ [API] Banners received: \(banners.data.count) items")
                     send(.setStores(stores))
                     send(.setBanners(banners))
                 },
                 onError: { error in
-                    .setError(error)
+                    print("❌ [API] HomeReactor error: \(error.localizedDescription)")
+                    return .setError(error)
                 }
             )
         }

@@ -50,7 +50,10 @@ actor KeychainAuthStorage: AuthTokenStorage {
     private init() {}
 
     func readAccess() async -> String? {
-        keychain.get(KeyChainKeys.accessToken.rawValue)
+        let token = keychain.get(KeyChainKeys.accessToken.rawValue)
+        
+        print("token", token)
+        return token
     }
 
     func readRefresh() async -> String? {

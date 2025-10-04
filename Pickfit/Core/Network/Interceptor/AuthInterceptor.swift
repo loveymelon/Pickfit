@@ -10,11 +10,9 @@ import Alamofire
 
 final class AuthInterceptor: RequestInterceptor {
     private let tokenStorage: AuthTokenStorage
-    private let refreshCoordinator: TokenRefreshCoordinator
 
     init(tokenStorage: AuthTokenStorage = KeychainAuthStorage.shared) {
         self.tokenStorage = tokenStorage
-        self.refreshCoordinator = TokenRefreshCoordinator()
     }
 
     // MARK: - RequestAdapter
@@ -24,7 +22,10 @@ final class AuthInterceptor: RequestInterceptor {
 
             // AccessToken을 헤더에 추가
             if let accessToken = await tokenStorage.readAccess() {
+                print("🔐 [Auth] Request: \(urlRequest.url?.path ?? "unknown") - Token exists")
                 request.setValue(accessToken, forHTTPHeaderField: "Authorization")
+            } else {
+                print("🔐 [Auth] Request: \(urlRequest.url?.path ?? "unknown") - No token")
             }
 
             completion(.success(request))
@@ -43,24 +44,30 @@ final class AuthInterceptor: RequestInterceptor {
         Task {
             switch statusCode {
             case 419:
+                print("❌ [Error] 419 - Token expired for: \(request.request?.url?.path ?? "unknown")")
                 // AccessToken 만료 → RefreshToken으로 갱신 후 재시도
                 do {
-                    _ = try await refreshCoordinator.refresh {
+                    print("🔄 [Refresh] Starting token refresh...")
+                    _ = try await TokenRefreshCoordinator.shared.refresh {
                         try await self.refreshTokens()
                     }
+                    print("✅ [Refresh] Token refresh successful - Retrying request")
                     completion(.retry)
                 } catch {
+                    print("❌ [Refresh] Token refresh failed: \(error.localizedDescription)")
                     // RefreshToken 갱신 실패 → 토큰 삭제 후 에러 전파
                     await tokenStorage.clear()
                     completion(.doNotRetry)
                 }
 
-            case 401, 418:
+            case 401, 403, 418:
+                print("❌ [Error] \(statusCode) - Auth failed for: \(request.request?.url?.path ?? "unknown")")
                 // 인증 불가능 또는 RefreshToken 만료 → 토큰 삭제 후 에러 전파
                 await tokenStorage.clear()
                 completion(.doNotRetry)
 
             default:
+                print("❌ [Error] \(statusCode) - Request failed: \(request.request?.url?.path ?? "unknown")")
                 // 기타 에러는 재시도 안함
                 completion(.doNotRetry)
             }
@@ -70,14 +77,18 @@ final class AuthInterceptor: RequestInterceptor {
     // MARK: - Private Methods
     private func refreshTokens() async throws -> String {
         guard let refreshToken = await tokenStorage.readRefresh() else {
+            print("❌ [Refresh] No refresh token available")
             throw NSError(domain: "AuthInterceptor", code: -1, userInfo: [NSLocalizedDescriptionKey: "RefreshToken이 없습니다"])
         }
 
+        print("🔄 [Refresh] Calling refresh token API with token: \(refreshToken.prefix(20))...")
         let dto = try await NetworkManager.auth.fetch(
             dto: RefreshTokenResponseDTO.self,
             router: LoginRouter.refreshToken(RefreshTokenRequestDTO(refreshToken: refreshToken))
         )
 
+        print("✅ [Refresh] New tokens received - Saving to storage")
+        print("✅ [Refresh] New access token: \(dto.accessToken.prefix(20))...")
         // 새 토큰 저장
         await tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
 
