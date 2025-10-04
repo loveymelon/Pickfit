@@ -67,7 +67,7 @@ final class StoreCell: UICollectionViewCell {
         tagsLabel.text = nil
     }
 
-    func configure(with store: StoreResponseDTO.Store, at index: Int, reactor: StoreListReactor) {
+    func configure(with store: StoreEntity, at index: Int, reactor: StoreListReactor) {
         nameLabel.text = store.name
         tagsLabel.text = store.hashTags.joined(separator: " ")
         likeButton.isSelected = store.isPicchelin
@@ -87,6 +87,10 @@ final class StoreCell: UICollectionViewCell {
             .map { StoreListReactor.Action.toggleLike(index: index) }
             .bind(to: reactor.action)
             .disposed(by: disposeBag)
+    }
+
+    func updateLikeState(isPicchelin: Bool) {
+        likeButton.isSelected = isPicchelin
     }
 }
 

@@ -29,6 +29,23 @@ final class StoreListViewController: BaseViewController<StoreListView> {
         super.viewDidLoad()
 
         mainView.collectionView.setCollectionViewLayout(createLayout(), animated: false)
+        configureNavigationBar()
+    }
+
+    private func configureNavigationBar() {
+        let backButton = UIBarButtonItem(
+            image: UIImage(named: "chevron"),
+            style: .plain,
+            target: self,
+            action: #selector(backButtonTapped)
+        )
+        backButton.tintColor = .black
+        navigationItem.leftBarButtonItem = backButton
+        navigationItem.hidesBackButton = true
+    }
+
+    @objc private func backButtonTapped() {
+        navigationController?.popViewController(animated: true)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -64,9 +81,10 @@ final class StoreListViewController: BaseViewController<StoreListView> {
             })
             .disposed(by: disposeBag)
 
-        // CollectionView 데이터 바인딩
+        // CollectionView 데이터 바인딩 - 초기 로드시에만
         reactor.state.map { $0.stores }
-            .distinctUntilChanged()
+            .filter { !$0.isEmpty }
+            .take(1)
             .bind(to: mainView.collectionView.rx.items(
                 cellIdentifier: StoreCell.identifier,
                 cellType: StoreCell.self
@@ -74,6 +92,20 @@ final class StoreListViewController: BaseViewController<StoreListView> {
                 guard let reactor = self?.reactor else { return }
                 cell.configure(with: store, at: index, reactor: reactor)
             }
+            .disposed(by: disposeBag)
+
+        // 좋아요 상태 변경 - 특정 셀만 업데이트
+        reactor.state.map { $0.stores }
+            .skip(1)
+            .distinctUntilChanged()
+            .subscribe(onNext: { [weak self] stores in
+                guard let self = self else { return }
+                stores.enumerated().forEach { index, store in
+                    if let cell = self.mainView.collectionView.cellForItem(at: IndexPath(item: index, section: 0)) as? StoreCell {
+                        cell.updateLikeState(isPicchelin: store.isPicchelin)
+                    }
+                }
+            })
             .disposed(by: disposeBag)
     }
 
