@@ -10,9 +10,12 @@ import SnapKit
 import Then
 
 final class StoreListView: BaseView {
-    let collectionView = UICollectionView(frame: .zero, collectionViewLayout: UICollectionViewFlowLayout()).then {
-        $0.register(StoreCell.self, forCellWithReuseIdentifier: StoreCell.identifier)
+    let tableView = UITableView().then {
+        $0.register(StoreCell.self, forCellReuseIdentifier: StoreCell.identifier)
         $0.backgroundColor = .white
+        $0.separatorStyle = .none
+        $0.rowHeight = UITableView.automaticDimension
+        $0.estimatedRowHeight = 250
     }
 
     override init(frame: CGRect) {
@@ -24,11 +27,11 @@ final class StoreListView: BaseView {
     }
 
     override func configureHierarchy() {
-        addSubview(collectionView)
+        addSubview(tableView)
     }
 
     override func configureLayout() {
-        collectionView.snp.makeConstraints {
+        tableView.snp.makeConstraints {
             $0.edges.equalToSuperview()
         }
     }

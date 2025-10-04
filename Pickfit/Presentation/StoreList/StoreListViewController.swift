@@ -28,7 +28,6 @@ final class StoreListViewController: BaseViewController<StoreListView> {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        mainView.collectionView.setCollectionViewLayout(createLayout(), animated: false)
         configureNavigationBar()
     }
 
@@ -81,11 +80,11 @@ final class StoreListViewController: BaseViewController<StoreListView> {
             })
             .disposed(by: disposeBag)
 
-        // CollectionView 데이터 바인딩 - 초기 로드시에만
+        // TableView 데이터 바인딩 - 초기 로드시에만
         reactor.state.map { $0.stores }
             .filter { !$0.isEmpty }
             .take(1)
-            .bind(to: mainView.collectionView.rx.items(
+            .bind(to: mainView.tableView.rx.items(
                 cellIdentifier: StoreCell.identifier,
                 cellType: StoreCell.self
             )) { [weak self] index, store, cell in
@@ -101,10 +100,18 @@ final class StoreListViewController: BaseViewController<StoreListView> {
             .subscribe(onNext: { [weak self] stores in
                 guard let self = self else { return }
                 stores.enumerated().forEach { index, store in
-                    if let cell = self.mainView.collectionView.cellForItem(at: IndexPath(item: index, section: 0)) as? StoreCell {
+                    if let cell = self.mainView.tableView.cellForRow(at: IndexPath(row: index, section: 0)) as? StoreCell {
                         cell.updateLikeState(isPicchelin: store.isPicchelin)
                     }
                 }
+            })
+            .disposed(by: disposeBag)
+
+        mainView.tableView.rx
+            .modelSelected(StoreEntity.self)
+            .withUnretained(self)
+            .subscribe(onNext: { owner, store in
+                owner.navigateToStoreDetail(storeId: store.storeId)
             })
             .disposed(by: disposeBag)
     }
@@ -113,26 +120,8 @@ final class StoreListViewController: BaseViewController<StoreListView> {
         NotificationCenter.default.post(name: .navigateToLogin, object: nil)
     }
 
-    private func createLayout() -> UICollectionViewLayout {
-        let item = NSCollectionLayoutItem(
-            layoutSize: .init(
-                widthDimension: .fractionalWidth(1.0),
-                heightDimension: .estimated(250)
-            )
-        )
-
-        let group = NSCollectionLayoutGroup.vertical(
-            layoutSize: .init(
-                widthDimension: .fractionalWidth(1.0),
-                heightDimension: .estimated(250)
-            ),
-            subitems: [item]
-        )
-
-        let section = NSCollectionLayoutSection(group: group)
-        section.interGroupSpacing = 16
-        section.contentInsets = .init(top: 16, leading: 0, bottom: 16, trailing: 0)
-
-        return UICollectionViewCompositionalLayout(section: section)
+    private func navigateToStoreDetail(storeId: String) {
+        let storeDetailVC = StoreDetailViewController(storeId: storeId)
+        navigationController?.pushViewController(storeDetailVC, animated: true)
     }
 }

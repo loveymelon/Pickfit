@@ -11,7 +11,7 @@ import SnapKit
 import RxSwift
 import RxCocoa
 
-final class StoreCell: UICollectionViewCell {
+final class StoreCell: UITableViewCell {
     private var disposeBag = DisposeBag()
 
     private let logoImageView = ImageLoadView(cornerRadius: 20, contentMode: .scaleAspectFill)
@@ -47,8 +47,8 @@ final class StoreCell: UICollectionViewCell {
         }
     }()
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
         configureUI()
     }
 
