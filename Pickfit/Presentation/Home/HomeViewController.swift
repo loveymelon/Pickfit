@@ -94,10 +94,24 @@ final class HomeViewController: BaseViewController<HomeView> {
         }
         .bind(to: mainView.collectionView.rx.items(dataSource: dataSource))
         .disposed(by: disposeBag)
+
+        // 카테고리 셀 탭 이벤트
+        mainView.collectionView.rx.modelSelected(HomeSectionItem.self)
+            .subscribe(onNext: { [weak self] item in
+                if case .category(let category) = item {
+                    self?.navigateToStoreList(category: category)
+                }
+            })
+            .disposed(by: disposeBag)
     }
 
     private func navigateToLogin() {
         NotificationCenter.default.post(name: .navigateToLogin, object: nil)
+    }
+
+    private func navigateToStoreList(category: Category) {
+        let storeListVC = StoreListViewController(category: category)
+        navigationController?.pushViewController(storeListVC, animated: true)
     }
 }
 

@@ -1,0 +1,106 @@
+//
+//  StoreListViewController.swift
+//  Pickfit
+//
+//  Created by 김진수 on 10/4/25.
+//
+
+import UIKit
+import RxSwift
+import RxCocoa
+import ReactorKit
+
+final class StoreListViewController: BaseViewController<StoreListView> {
+    var disposeBag = DisposeBag()
+
+    private let reactor: StoreListReactor
+
+    init(category: Category) {
+        self.reactor = StoreListReactor(category: category)
+        super.init(nibName: nil, bundle: nil)
+        self.title = category.displayName
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        mainView.collectionView.setCollectionViewLayout(createLayout(), animated: false)
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // 탭바 숨기기
+        tabBarController?.tabBar.isHidden = true
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // 탭바 다시 보이기
+        tabBarController?.tabBar.isHidden = false
+    }
+
+    override func bind() {
+        super.bind()
+
+        rx.viewDidLoad
+            .map { StoreListReactor.Action.viewDidLoad }
+            .bind(to: reactor.action)
+            .disposed(by: disposeBag)
+
+        rx.viewIsAppearing
+            .map { StoreListReactor.Action.viewIsAppearing }
+            .bind(to: reactor.action)
+            .disposed(by: disposeBag)
+
+        reactor.state.map { $0.shouldNavigateToLogin }
+            .filter { $0 }
+            .distinctUntilChanged()
+            .subscribe(onNext: { [weak self] _ in
+                self?.navigateToLogin()
+            })
+            .disposed(by: disposeBag)
+
+        // CollectionView 데이터 바인딩
+        reactor.state.map { $0.stores }
+            .distinctUntilChanged()
+            .bind(to: mainView.collectionView.rx.items(
+                cellIdentifier: StoreCell.identifier,
+                cellType: StoreCell.self
+            )) { [weak self] index, store, cell in
+                guard let reactor = self?.reactor else { return }
+                cell.configure(with: store, at: index, reactor: reactor)
+            }
+            .disposed(by: disposeBag)
+    }
+
+    private func navigateToLogin() {
+        NotificationCenter.default.post(name: .navigateToLogin, object: nil)
+    }
+
+    private func createLayout() -> UICollectionViewLayout {
+        let item = NSCollectionLayoutItem(
+            layoutSize: .init(
+                widthDimension: .fractionalWidth(1.0),
+                heightDimension: .estimated(250)
+            )
+        )
+
+        let group = NSCollectionLayoutGroup.vertical(
+            layoutSize: .init(
+                widthDimension: .fractionalWidth(1.0),
+                heightDimension: .estimated(250)
+            ),
+            subitems: [item]
+        )
+
+        let section = NSCollectionLayoutSection(group: group)
+        section.interGroupSpacing = 16
+        section.contentInsets = .init(top: 16, leading: 0, bottom: 16, trailing: 0)
+
+        return UICollectionViewCompositionalLayout(section: section)
+    }
+}
