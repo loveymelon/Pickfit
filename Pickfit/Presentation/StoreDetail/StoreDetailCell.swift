@@ -10,11 +10,10 @@ import SnapKit
 import Then
 
 final class StoreDetailCell: UICollectionViewCell {
-    private let imageLoadView = ImageLoadView(cornerRadius: 20)
+    private let imageLoadView = ImageLoadView(contentMode: .scaleAspectFill)
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-
         configureUI()
     }
 
@@ -27,8 +26,8 @@ final class StoreDetailCell: UICollectionViewCell {
         imageLoadView.cancelLoading()
     }
 
-    func configure(with store: StoreEntity) {
-        imageLoadView.loadImage(from: store.storeImageUrls.first)
+    func configure(with imageUrl: String) {
+        imageLoadView.loadImage(from: imageUrl)
     }
 }
 

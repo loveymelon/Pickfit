@@ -11,12 +11,13 @@ import Alamofire
 enum StoreRouter: Router {
     case fetchStore(StoreRequestDTO)
     case fetchBanner
+    case fetchStoreDetail(String)
 }
 
 extension StoreRouter {
     var method: HTTPMethod {
         switch self {
-        case .fetchStore, .fetchBanner:
+        case .fetchStore, .fetchBanner, .fetchStoreDetail:
             return .get
         }
     }
@@ -28,12 +29,15 @@ extension StoreRouter {
             
         case .fetchBanner:
             return "/banners/main"
+            
+        case let .fetchStoreDetail(storeId):
+            return "/stores/\(storeId)"
         }
     }
 
     var optionalHeaders: HTTPHeaders? {
         switch self {
-        case .fetchStore, .fetchBanner:
+        case .fetchStore, .fetchBanner, .fetchStoreDetail:
             return HTTPHeaders([
                 HTTPHeader(name: "SeSACKey", value: APIKey.sesacKey),
                 HTTPHeader(name: "accept", value: "application/json")
@@ -46,21 +50,21 @@ extension StoreRouter {
         case let .fetchStore(request):
             return try? request.asDictionary()
             
-        case .fetchBanner:
+        case .fetchBanner, .fetchStoreDetail:
             return nil
         }
     }
 
     var body: Data? {
         switch self {
-        case .fetchStore, .fetchBanner:
+        case .fetchStore, .fetchBanner, .fetchStoreDetail:
             return nil
         }
     }
 
     var encodingType: EncodingType {
         switch self {
-        case .fetchStore:
+        case .fetchStore, .fetchStoreDetail:
             return .url
             
         case .fetchBanner:

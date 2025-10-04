@@ -10,17 +10,11 @@ import SnapKit
 import Then
 
 final class StoreDetailView: BaseView {
-    private let bannerImageViews: [ImageLoadView] = (0..<3).map { _ in
-        ImageLoadView(cornerRadius: 8, contentMode: .scaleAspectFill)
+    let collectionView: UICollectionView = UICollectionView(frame: .zero, collectionViewLayout: UICollectionViewFlowLayout()).then {
+        $0.backgroundColor = .white
+        $0.register(StoreDetailCell.self, forCellWithReuseIdentifier: StoreDetailCell.identifier)
     }
     
-    private lazy var bannerStackView: UIStackView = {
-        UIStackView(arrangedSubviews: bannerImageViews).then {
-            $0.axis = .horizontal
-            $0.spacing = 10
-            $0.distribution = .fillEqually
-        }
-    }()
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -31,12 +25,12 @@ final class StoreDetailView: BaseView {
     }
     
     override func configureHierarchy() {
-        addSubview(bannerStackView)
+        addSubview(collectionView)
     }
 
     override func configureLayout() {
-//        collectionView.snp.makeConstraints {
-//            $0.edges.equalToSuperview()
-//        }
+        collectionView.snp.makeConstraints {
+            $0.edges.equalToSuperview()
+        }
     }
 }

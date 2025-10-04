@@ -42,4 +42,14 @@ final class StoreRepository {
 
         return dto
     }
+
+    func fetchStoreDetail(storeId: String) async throws -> StoreDetailEntity {
+        let dto = try await NetworkManager.shared.fetch(
+            dto: StoreDetailResponseDTO.self,
+            router: StoreRouter.fetchStoreDetail(storeId)
+        )
+
+        let entity = StoreDetailMapper.dtoToEntity(dto)
+        return entity
+    }
 }
