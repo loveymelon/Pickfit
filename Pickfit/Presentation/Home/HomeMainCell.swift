@@ -27,7 +27,7 @@ final class HomeMainCell: UICollectionViewCell {
         imageLoadView.cancelLoading()
     }
 
-    func configure(with store: StoreResponseDTO.Store) {
+    func configure(with store: StoreEntity) {
         imageLoadView.loadImage(from: store.storeImageUrls.first)
     }
 }

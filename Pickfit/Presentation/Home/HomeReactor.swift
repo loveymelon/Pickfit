@@ -24,7 +24,7 @@ final class HomeReactor: Reactor {
     enum Mutation {
         case setViewDidLoad
         case setLoading(Bool)
-        case setStores(StoreResponseDTO)
+        case setStores(stores: [StoreEntity], nextCursor: String)
         case setBanners(BannerResponseDTO)
         case setError(Error)
         case logout
@@ -33,7 +33,7 @@ final class HomeReactor: Reactor {
     struct State {
         var isViewLoaded: Bool = false
         var isLoading: Bool = false
-        var stores: [StoreResponseDTO.Store] = []
+        var stores: [StoreEntity] = []
         var categories: [Category] = Category.allCases
         var banners: [BannerResponseDTO.Banner] = []
         var nextCursor: String = ""
@@ -54,7 +54,7 @@ final class HomeReactor: Reactor {
                     print("📡 [API] HomeReactor - Starting API calls")
                     send(.setLoading(true))
 
-                    async let storesResponse = self.storeRepository.fetchStores(
+                    async let storesResult = self.storeRepository.fetchStores(
                         category: "Modern",
                         longitude: 127.0,
                         latitude: 37.5,
@@ -62,11 +62,11 @@ final class HomeReactor: Reactor {
                     )
                     async let bannersResponse = self.storeRepository.fetchBanners()
 
-                    let (stores, banners) = try await (storesResponse, bannersResponse)
+                    let (stores, banners) = try await (storesResult, bannersResponse)
 
-                    print("✅ [API] Stores received: \(stores.data.count) items")
+                    print("✅ [API] Stores received: \(stores.stores.count) items")
                     print("✅ [API] Banners received: \(banners.data.count) items")
-                    send(.setStores(stores))
+                    send(.setStores(stores: stores.stores, nextCursor: stores.nextCursor))
                     send(.setBanners(banners))
                 },
                 onError: { error in
@@ -92,10 +92,10 @@ final class HomeReactor: Reactor {
             newState.isLoading = isLoading
             newState.errorMessage = nil
 
-        case .setStores(let response):
+        case .setStores(let stores, let nextCursor):
             newState.isLoading = false
-            newState.stores = response.data
-            newState.nextCursor = response.nextCursor
+            newState.stores = stores
+            newState.nextCursor = nextCursor
             newState.errorMessage = nil
 
         case .setBanners(let response):

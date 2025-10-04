@@ -14,7 +14,7 @@ final class StoreRepository {
         latitude: Double,
         orderBy: StoreRequestDTO.StoreOrderBy,
         next: String = ""
-    ) async throws -> StoreResponseDTO {
+    ) async throws -> (stores: [StoreEntity], nextCursor: String) {
         let fullCategory = "Jin\(category)"
 
         let request = StoreRequestDTO(
@@ -30,7 +30,8 @@ final class StoreRepository {
             router: StoreRouter.fetchStore(request)
         )
 
-        return dto
+        let entities = StoreMapper.dtoListToEntityList(dto.data)
+        return (stores: entities, nextCursor: dto.nextCursor)
     }
 
     func fetchBanners() async throws -> BannerResponseDTO {

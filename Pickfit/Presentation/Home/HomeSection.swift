@@ -8,7 +8,7 @@
 import RxDataSources
 
 enum HomeSectionModel {
-    case main([StoreResponseDTO.Store])
+    case main([StoreEntity])
     case category([Category])
     case banner([BannerResponseDTO.Banner])
 }
@@ -30,7 +30,7 @@ extension HomeSectionModel: SectionModelType {
     init(original: HomeSectionModel, items: [HomeSectionItem]) {
         switch original {
         case .main:
-            let stores = items.compactMap { item -> StoreResponseDTO.Store? in
+            let stores = items.compactMap { item -> StoreEntity? in
                 if case .store(let store) = item {
                     return store
                 }
@@ -58,7 +58,7 @@ extension HomeSectionModel: SectionModelType {
 }
 
 enum HomeSectionItem {
-    case store(StoreResponseDTO.Store)
+    case store(StoreEntity)
     case category(Category)
     case banner(BannerResponseDTO.Banner)
 }

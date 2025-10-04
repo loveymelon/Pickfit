@@ -26,7 +26,7 @@ final class StoreListReactor: Reactor {
     enum Mutation {
         case setViewDidLoad
         case setLoading(Bool)
-        case setStores(StoreResponseDTO)
+        case setStores(stores: [StoreEntity], nextCursor: String)
         case setError(Error)
         case logout
         case toggleLikeState(index: Int)
@@ -35,7 +35,7 @@ final class StoreListReactor: Reactor {
     struct State {
         var isViewLoaded: Bool = false
         var isLoading: Bool = false
-        var stores: [StoreResponseDTO.Store] = []
+        var stores: [StoreEntity] = []
         var nextCursor: String = ""
         var errorMessage: String? = nil
         var shouldNavigateToLogin: Bool = false
@@ -54,15 +54,15 @@ final class StoreListReactor: Reactor {
                     print("📡 [API] StoreListReactor - Fetching stores for category: \(self.category.displayName)")
                     send(.setLoading(true))
 
-                    let response = try await self.storeRepository.fetchStores(
+                    let result = try await self.storeRepository.fetchStores(
                         category: self.category.rawValue.capitalized,
                         longitude: 127.0,
                         latitude: 37.5,
                         orderBy: .distance
                     )
 
-                    print("✅ [API] StoreList - Stores received: \(response.data.count) items")
-                    send(.setStores(response))
+                    print("✅ [API] StoreList - Stores received: \(result.stores.count) items")
+                    send(.setStores(stores: result.stores, nextCursor: result.nextCursor))
                 },
                 onError: { error in
                     print("❌ [API] StoreListReactor error: \(error.localizedDescription)")
@@ -90,10 +90,10 @@ final class StoreListReactor: Reactor {
             newState.isLoading = isLoading
             newState.errorMessage = nil
 
-        case .setStores(let response):
+        case .setStores(let stores, let nextCursor):
             newState.isLoading = false
-            newState.stores = response.data
-            newState.nextCursor = response.nextCursor
+            newState.stores = stores
+            newState.nextCursor = nextCursor
             newState.errorMessage = nil
 
         case .setError(let error):
