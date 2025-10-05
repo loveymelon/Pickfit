@@ -10,7 +10,14 @@ import SnapKit
 import Then
 
 final class StoreDetailCell: UICollectionViewCell {
-    private let imageLoadView = ImageLoadView(contentMode: .scaleAspectFill)
+    private let imageLoadView = ImageLoadView(contentMode: .scaleToFill)
+    
+//    private let detailLabel = UILabel().then {
+//        $0.font = .systemFont(ofSize: 20, weight: .bold)
+//        $0.textColor = .white
+//        $0.numberOfLines = 0
+//        $0.text = "fasdjfkljasdkl"
+//    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -39,11 +46,17 @@ extension StoreDetailCell: UIConfigureProtocol {
 
     func configureHierarchy() {
         contentView.addSubview(imageLoadView)
+//        contentView.addSubview(detailLabel)
     }
 
     func configureLayout() {
         imageLoadView.snp.makeConstraints {
             $0.edges.equalToSuperview()
         }
+        
+//        detailLabel.snp.makeConstraints {
+//            $0.leading.equalToSuperview()
+//            $0.bottom.equalToSuperview()
+//        }
     }
 }
