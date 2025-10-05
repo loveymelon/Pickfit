@@ -8,5 +8,6 @@
 import Foundation
 
 struct RefreshTokenRequestDTO: DTO, Encodable {
+    let accessToken: String
     let refreshToken: String
 }

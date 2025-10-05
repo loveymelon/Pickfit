@@ -24,13 +24,17 @@ final class AuthRepository {
     }
 
     func refreshToken() async throws -> (accessToken: String, refreshToken: String) {
-        guard let refreshToken = await tokenStorage.readRefresh() else {
-            throw NSError(domain: "AuthRepository", code: -1, userInfo: [NSLocalizedDescriptionKey: "RefreshToken이 없습니다"])
+        guard let refreshToken = await tokenStorage.readRefresh(),
+              let accessToken = await tokenStorage.readAccess() else {
+            throw NSError(domain: "AuthRepository", code: -1, userInfo: [NSLocalizedDescriptionKey: "Token이 없습니다"])
         }
 
         let dto = try await NetworkManager.auth.fetch(
             dto: RefreshTokenResponseDTO.self,
-            router: LoginRouter.refreshToken(RefreshTokenRequestDTO(refreshToken: refreshToken))
+            router: LoginRouter.refreshToken(RefreshTokenRequestDTO(
+                accessToken: accessToken,
+                refreshToken: refreshToken
+            ))
         )
 
         await tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)

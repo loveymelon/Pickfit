@@ -56,7 +56,7 @@ extension NetworkManager {
                     print("❌ [Network] Error response: \(errorMessage)")
                 }
 
-                if statusCode == 401 || statusCode == 418 {
+                if statusCode == 401 || statusCode == 403 || statusCode == 418 {
                     throw NetworkError.unauthorized
                 }
             } else {

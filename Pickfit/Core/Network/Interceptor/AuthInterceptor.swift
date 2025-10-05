@@ -76,15 +76,27 @@ final class AuthInterceptor: RequestInterceptor {
 
     // MARK: - Private Methods
     private func refreshTokens() async throws -> String {
-        guard let refreshToken = await tokenStorage.readRefresh() else {
-            print("❌ [Refresh] No refresh token available")
-            throw NSError(domain: "AuthInterceptor", code: -1, userInfo: [NSLocalizedDescriptionKey: "RefreshToken이 없습니다"])
+        guard let refreshToken = await tokenStorage.readRefresh(),
+              let accessToken = await tokenStorage.readAccess() else {
+            print("❌ [Refresh] No tokens available")
+            throw NSError(domain: "AuthInterceptor", code: -1, userInfo: [NSLocalizedDescriptionKey: "Token이 없습니다"])
         }
 
-        print("🔄 [Refresh] Calling refresh token API with token: \(refreshToken.prefix(20))...")
+        print("🔄 [Refresh] Calling refresh token API")
+        print("🔍 [Refresh] AccessToken: \(accessToken.prefix(20))...")
+        print("🔍 [Refresh] RefreshToken: \(refreshToken.prefix(20))...")
+
+        let router = LoginRouter.refreshToken(RefreshTokenRequestDTO(
+            accessToken: accessToken,
+            refreshToken: refreshToken
+        ))
+        let request = try router.asURLRequest()
+        print("🔍 [Refresh] Request URL: \(request.url?.absoluteString ?? "nil")")
+        print("🔍 [Refresh] Request Headers: \(request.allHTTPHeaderFields ?? [:])")
+
         let dto = try await NetworkManager.auth.fetch(
             dto: RefreshTokenResponseDTO.self,
-            router: LoginRouter.refreshToken(RefreshTokenRequestDTO(refreshToken: refreshToken))
+            router: router
         )
 
         print("✅ [Refresh] New tokens received - Saving to storage")

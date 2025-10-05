@@ -162,13 +162,17 @@ final class ImageLoadView: UIView {
     }
 
     private func refreshToken() async throws -> String {
-        guard let refreshToken = await KeychainAuthStorage.shared.readRefresh() else {
-            throw NSError(domain: "ImageLoadView", code: -1, userInfo: [NSLocalizedDescriptionKey: "RefreshToken이 없습니다"])
+        guard let refreshToken = await KeychainAuthStorage.shared.readRefresh(),
+              let accessToken = await KeychainAuthStorage.shared.readAccess() else {
+            throw NSError(domain: "ImageLoadView", code: -1, userInfo: [NSLocalizedDescriptionKey: "Token이 없습니다"])
         }
 
         let dto = try await NetworkManager.auth.fetch(
             dto: RefreshTokenResponseDTO.self,
-            router: LoginRouter.refreshToken(RefreshTokenRequestDTO(refreshToken: refreshToken))
+            router: LoginRouter.refreshToken(RefreshTokenRequestDTO(
+                accessToken: accessToken,
+                refreshToken: refreshToken
+            ))
         )
 
         // 새 토큰 저장

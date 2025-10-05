@@ -39,10 +39,12 @@ extension LoginRouter {
                 HTTPHeader(name: "SeSACKey", value: APIKey.sesacKey),
                 HTTPHeader(name: "accept", value: "application/json")
             ])
-        case .refreshToken:
+        case let .refreshToken(requestDTO):
             return HTTPHeaders([
                 HTTPHeader(name: "SeSACKey", value: APIKey.sesacKey),
-                HTTPHeader(name: "accept", value: "application/json")
+                HTTPHeader(name: "accept", value: "application/json"),
+                HTTPHeader(name: "Authorization", value: requestDTO.accessToken),
+                HTTPHeader(name: "RefreshToken", value: requestDTO.refreshToken)
             ])
         }
     }
@@ -51,8 +53,8 @@ extension LoginRouter {
         switch self {
         case .kakaoLogin:
             return nil
-        case let .refreshToken(requestDTO):
-            return ["refreshToken": requestDTO.refreshToken]
+        case .refreshToken:
+            return nil
         }
     }
 
