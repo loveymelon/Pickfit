@@ -46,6 +46,10 @@ final class StoreHeaderView: UICollectionReusableView {
         $0.tintColor = .lightGray
     }
 
+    private let separatorView = UIView().then {
+        $0.backgroundColor = .systemGray6
+    }
+
     // MARK: - Init
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -57,7 +61,7 @@ final class StoreHeaderView: UICollectionReusableView {
 
     // MARK: - Setup
     private func configureHierarchy() {
-        [logoImageView, titleLabel, subtitleLabel, likeButton, infoButton].forEach {
+        [logoImageView, titleLabel, subtitleLabel, likeButton, infoButton, separatorView].forEach {
             addSubview($0)
         }
     }
@@ -84,13 +88,19 @@ final class StoreHeaderView: UICollectionReusableView {
             $0.top.equalTo(subtitleLabel.snp.bottom).offset(16)
             $0.leading.trailing.equalToSuperview().inset(20)
             $0.height.equalTo(44)
-            $0.bottom.equalToSuperview().inset(20)
         }
 
         infoButton.snp.makeConstraints {
             $0.centerY.equalTo(titleLabel)
             $0.trailing.equalToSuperview().inset(16)
             $0.width.height.equalTo(20)
+        }
+
+        separatorView.snp.makeConstraints {
+            $0.top.equalTo(likeButton.snp.bottom).offset(20)
+            $0.leading.trailing.equalToSuperview()
+            $0.height.equalTo(8)
+            $0.bottom.equalToSuperview()
         }
     }
 

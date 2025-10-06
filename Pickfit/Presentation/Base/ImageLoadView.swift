@@ -22,23 +22,38 @@ final class ImageLoadView: UIView {
     }
 
     private let errorView = UIView().then {
-        $0.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.9)
-        $0.layer.cornerRadius = 12
+        $0.backgroundColor = .systemGray6
+        $0.layer.cornerRadius = 8
         $0.isHidden = true
     }
 
+    private let errorStackView = UIStackView().then {
+        $0.axis = .vertical
+        $0.alignment = .center
+        $0.spacing = 8
+    }
+
     private let errorImageView = UIImageView().then {
-        $0.image = UIImage(systemName: "exclamationmark.triangle.fill")
-        $0.tintColor = .orange
+        $0.image = UIImage(systemName: "photo")
+        $0.tintColor = .systemGray3
         $0.contentMode = .scaleAspectFit
+    }
+
+    private let errorLabel = UILabel().then {
+        $0.text = "이미지를 불러올 수 없습니다"
+        $0.font = .systemFont(ofSize: 12, weight: .medium)
+        $0.textColor = .systemGray
+        $0.textAlignment = .center
     }
 
     private let retryButton = UIButton(type: .system).then {
         $0.setTitle("재시도", for: .normal)
-        $0.titleLabel?.font = .systemFont(ofSize: 13)
-        $0.backgroundColor = UIColor.systemGray6
-        $0.layer.cornerRadius = 12
-        $0.contentEdgeInsets = UIEdgeInsets(top: 6, left: 10, bottom: 6, right: 10)
+        $0.titleLabel?.font = .systemFont(ofSize: 13, weight: .medium)
+        $0.backgroundColor = .white
+        $0.setTitleColor(.systemBlue, for: .normal)
+        $0.layer.cornerRadius = 6
+        $0.layer.borderWidth = 1
+        $0.layer.borderColor = UIColor.systemGray4.cgColor
     }
 
     private var currentImageURL: String?
@@ -215,8 +230,10 @@ extension ImageLoadView: UIConfigureProtocol {
         addSubview(imageView)
         addSubview(loadingIndicator)
         addSubview(errorView)
-        errorView.addSubview(errorImageView)
-        errorView.addSubview(retryButton)
+        errorView.addSubview(errorStackView)
+        errorStackView.addArrangedSubview(errorImageView)
+        errorStackView.addArrangedSubview(errorLabel)
+        errorStackView.addArrangedSubview(retryButton)
     }
 
     func configureLayout() {
@@ -229,20 +246,21 @@ extension ImageLoadView: UIConfigureProtocol {
         }
 
         errorView.snp.makeConstraints {
+            $0.edges.equalToSuperview()
+        }
+
+        errorStackView.snp.makeConstraints {
             $0.center.equalToSuperview()
-            $0.width.equalTo(120)
+            $0.leading.trailing.equalToSuperview().inset(16)
         }
 
         errorImageView.snp.makeConstraints {
-            $0.top.equalToSuperview().offset(12)
-            $0.centerX.equalToSuperview()
-            $0.size.equalTo(24)
+            $0.size.equalTo(40)
         }
 
         retryButton.snp.makeConstraints {
-            $0.top.equalTo(errorImageView.snp.bottom).offset(8)
-            $0.centerX.equalToSuperview()
-            $0.bottom.equalToSuperview().offset(-12)
+            $0.height.equalTo(32)
+            $0.width.equalTo(80)
         }
     }
 }
