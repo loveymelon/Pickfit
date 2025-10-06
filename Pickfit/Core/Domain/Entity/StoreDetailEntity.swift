@@ -27,7 +27,7 @@ struct StoreDetailEntity {
     let totalRating: Double
     let creator: Creator
     let geolocation: Geolocation
-    let menuList: [String]
+    let menuList: [Menu]
     let createdAt: String
     let updatedAt: String
 
@@ -39,5 +39,20 @@ struct StoreDetailEntity {
     struct Geolocation {
         let longitude: Double
         let latitude: Double
+    }
+
+    struct Menu {
+        let menuId: String
+        let storeId: String
+        let category: String
+        let name: String
+        let description: String
+        let originInformation: String
+        let price: Int
+        let isSoldOut: Bool
+        let tags: [String]
+        let menuImageUrl: String
+        let createdAt: String
+        let updatedAt: String
     }
 }

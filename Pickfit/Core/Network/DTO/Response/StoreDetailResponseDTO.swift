@@ -27,7 +27,7 @@ struct StoreDetailResponseDTO: DTO {
     let totalRating: Double
     let creator: Creator
     let geolocation: Geolocation
-    let menuList: [String]
+    let menuList: [Menu]
     let createdAt: String
     let updatedAt: String
 
@@ -44,6 +44,36 @@ struct StoreDetailResponseDTO: DTO {
     struct Geolocation: DTO {
         let longitude: Double
         let latitude: Double
+    }
+
+    struct Menu: DTO {
+        let menuId: String
+        let storeId: String
+        let category: String
+        let name: String
+        let description: String
+        let originInformation: String
+        let price: Int
+        let isSoldOut: Bool
+        let tags: [String]
+        let menuImageUrl: String
+        let createdAt: String
+        let updatedAt: String
+
+        enum CodingKeys: String, CodingKey {
+            case menuId = "menu_id"
+            case storeId = "store_id"
+            case category
+            case name
+            case description
+            case originInformation = "origin_information"
+            case price
+            case isSoldOut = "is_sold_out"
+            case tags
+            case menuImageUrl = "menu_image_url"
+            case createdAt
+            case updatedAt
+        }
     }
 
     enum CodingKeys: String, CodingKey {

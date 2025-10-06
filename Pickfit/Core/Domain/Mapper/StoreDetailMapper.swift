@@ -35,7 +35,22 @@ struct StoreDetailMapper {
                 longitude: dto.geolocation.longitude,
                 latitude: dto.geolocation.latitude
             ),
-            menuList: dto.menuList,
+            menuList: dto.menuList.map { menuDTO in
+                StoreDetailEntity.Menu(
+                    menuId: menuDTO.menuId,
+                    storeId: menuDTO.storeId,
+                    category: menuDTO.category,
+                    name: menuDTO.name,
+                    description: menuDTO.description,
+                    originInformation: menuDTO.originInformation,
+                    price: menuDTO.price,
+                    isSoldOut: menuDTO.isSoldOut,
+                    tags: menuDTO.tags,
+                    menuImageUrl: menuDTO.menuImageUrl,
+                    createdAt: menuDTO.createdAt,
+                    updatedAt: menuDTO.updatedAt
+                )
+            },
             createdAt: dto.createdAt,
             updatedAt: dto.updatedAt
         )

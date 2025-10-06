@@ -37,6 +37,9 @@ enum ProductCategory: String, CaseIterable {
     case top = "상의"
     case pants = "팬츠"
     case shoes = "신발"
+    case bag = "가방"
+    case jewellery = "장신구"
+    case trailing = "트레이닝"
 }
 
 final class StoreDetailViewController: BaseViewController<StoreDetailView> {
@@ -62,6 +65,7 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.navigationBar.prefersLargeTitles = false
+        tabBarController?.tabBar.isHidden = true
     }
 
     private func configureNavigationBar() {
@@ -155,6 +159,16 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
         // 섹션 데이터 바인딩
         reactor.state.compactMap { $0.storeDetail }
             .distinctUntilChanged { $0.storeId == $1.storeId }
+            .do(onNext: { [weak self] _ in
+                // 첫 번째 카테고리(전체)를 기본 선택
+                DispatchQueue.main.async {
+                    self?.mainView.collectionView.selectItem(
+                        at: IndexPath(item: 0, section: 1),
+                        animated: false,
+                        scrollPosition: []
+                    )
+                }
+            })
             .map { storeDetail -> [StoreDetailSection] in
                 // Section 0: 이미지 섹션 (헤더 포함)
                 let imageItems = storeDetail.storeImageUrls.map { StoreDetailSection.Item.image($0) }
@@ -164,17 +178,39 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
                 let categoryItems = ProductCategory.allCases.map { StoreDetailSection.Item.category($0.rawValue) }
                 let categorySection = StoreDetailSection(header: nil, items: categoryItems)
 
-                // Section 2: 상품 리스트 섹션 (TODO: 실제 상품 데이터로 교체)
-                let dummyProducts: [ProductModel] = (0..<10).map { index in
-                    ProductModel(
-                        imageUrl: storeDetail.storeImageUrls.first,
-                        title: "상품 \(index + 1)",
-                        priceText: "50,000원",
-                        discountPercent: index % 2 == 0 ? 20 : nil,
-                        isLiked: false
-                    )
+                // Section 2: 상품 리스트 섹션
+                let products: [ProductModel]
+                if !storeDetail.menuList.isEmpty {
+                    // menuList가 있으면 실제 메뉴 데이터 사용
+                    products = storeDetail.menuList.compactMap { menu in
+                        // tag가 2개 이상이면 필터링
+                        guard menu.tags.count < 2 else { return nil }
+
+                        return ProductModel(
+                            imageUrl: menu.menuImageUrl,
+                            title: menu.name,
+                            priceText: "\(menu.price)원",
+                            discountPercent: nil,
+                            isLiked: false
+                        )
+                    }
+                } else {
+                    // menuList가 없으면 더미 데이터 사용
+                    products = (0..<10).compactMap { index in
+                        let tagCount = Int.random(in: 0...3)
+                        guard tagCount < 2 else { return nil }
+
+                        return ProductModel(
+                            imageUrl: storeDetail.storeImageUrls.first,
+                            title: "상품 \(index + 1)",
+                            priceText: "50,000원",
+                            discountPercent: index % 2 == 0 ? 20 : nil,
+                            isLiked: false
+                        )
+                    }
                 }
-                let productItems = dummyProducts.map { StoreDetailSection.Item.product($0) }
+
+                let productItems = products.map { StoreDetailSection.Item.product($0) }
                 let productSection = StoreDetailSection(header: nil, items: productItems)
 
                 return [imageSection, categorySection, productSection]
@@ -191,11 +227,11 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
         let layout = UICollectionViewCompositionalLayout { (sectionIndex,_) -> NSCollectionLayoutSection? in
             return self.createSection(for: sectionIndex)
         }
-        
+
         let config = UICollectionViewCompositionalLayoutConfiguration()
-        config.interSectionSpacing = 18
+        config.interSectionSpacing = 0
         layout.configuration = config
-        
+
         return layout
     }
     
@@ -237,6 +273,18 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
         section.orthogonalScrollingBehavior = .paging
         section.interGroupSpacing = 0
         section.contentInsets = .zero
+        
+        // 헤더 추가
+        let headerSize = NSCollectionLayoutSize(
+            widthDimension: .fractionalWidth(1.0),
+            heightDimension: .estimated(200)
+        )
+        let header = NSCollectionLayoutBoundarySupplementaryItem(
+            layoutSize: headerSize,
+            elementKind: UICollectionView.elementKindSectionHeader,
+            alignment: .bottom
+        )
+        section.boundarySupplementaryItems = [header]
 
         return section
     }
@@ -271,28 +319,16 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
                               heightDimension: .estimated(240))
         )
         item.contentInsets = .init(top: 0, leading: 8, bottom: 12, trailing: 8)
-        
+
         let group = NSCollectionLayoutGroup.horizontal(
             layoutSize: .init(widthDimension: .fractionalWidth(1.0),
                               heightDimension: .estimated(240)),
             subitems: [item, item]
         )
-        
+
         let section = NSCollectionLayoutSection(group: group)
         section.contentInsets = .init(top: 0, leading: 12, bottom: 16, trailing: 12)
-        
-        // 헤더 추가
-        let headerSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(1.0),
-            heightDimension: .estimated(200)
-        )
-        let header = NSCollectionLayoutBoundarySupplementaryItem(
-            layoutSize: headerSize,
-            elementKind: UICollectionView.elementKindSectionHeader,
-            alignment: .top
-        )
-        section.boundarySupplementaryItems = [header]
-        
+
         return section
     }
 }
