@@ -187,11 +187,13 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
                         guard menu.tags.count < 2 else { return nil }
 
                         return ProductModel(
+                            menuId: menu.menuId,
                             imageUrl: menu.menuImageUrl,
                             title: menu.name,
                             priceText: "\(menu.price)원",
                             discountPercent: nil,
-                            isLiked: false
+                            isLiked: false,
+                            tags: menu.tags
                         )
                     }
                 } else {
@@ -201,11 +203,13 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
                         guard tagCount < 2 else { return nil }
 
                         return ProductModel(
+                            menuId: "dummy_\(index)",
                             imageUrl: storeDetail.storeImageUrls.first,
                             title: "상품 \(index + 1)",
                             priceText: "50,000원",
                             discountPercent: index % 2 == 0 ? 20 : nil,
-                            isLiked: false
+                            isLiked: false,
+                            tags: []
                         )
                     }
                 }
@@ -217,6 +221,61 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
             }
             .bind(to: mainView.collectionView.rx.items(dataSource: dataSource))
             .disposed(by: disposeBag)
+
+        // 상품 선택 처리
+        mainView.collectionView.rx.modelSelected(StoreDetailItem.self)
+            .withUnretained(self)
+            .compactMap { owner, item -> [StoreDetailEntity.Menu]? in
+                guard case .product(let productModel) = item else {
+                    return nil
+                }
+                
+                let menuId = productModel.menuId
+                
+                guard let menuList = owner.reactor.currentState.storeDetail?.menuList else {
+                    return nil
+                }
+                
+                let items = menuList.filter { $0.tags.contains(menuId) }
+                
+                guard let selectedMenu = menuList.first(where: { $0.menuId == menuId }) else {
+                    return nil
+                }
+                
+                return [selectedMenu] + items
+                
+//                reactor.state.storeDetail
+//                guard let self = self,
+//                      case .product(let productModel) = item,
+//                      let storeDetail = self.reactor.currentState.storeDetail else {
+//                    return nil
+//                }
+                // 선택된 menu를 배열에 먼저 추가
+//                guard let selectedMenu = storeDetail.menuList.first(where: { $0.menuId == productModel.menuId }) else {
+//                    return nil
+//                }
+//
+//                var relatedMenus: [StoreDetailEntity.Menu] = [selectedMenu]
+//
+//                // 선택된 menu의 tag들로 menuList에서 해당 menuId를 가진 아이템 찾기
+//                for tag in productModel.tags {
+//                    let menusWithTag = storeDetail.menuList.filter { menu in
+//                        menu.menuId == tag
+//                    }
+//                    relatedMenus.append(contentsOf: menusWithTag)
+//                }
+
+//                return relatedMenus
+            }
+            .subscribe(onNext: { [weak self] menus in
+                self?.navigateToProductDetail(menus: menus)
+            })
+            .disposed(by: disposeBag)
+    }
+
+    private func navigateToProductDetail(menus: [StoreDetailEntity.Menu]) {
+        let productDetailVC = ProductDetailViewController(menus: menus)
+        navigationController?.pushViewController(productDetailVC, animated: true)
     }
 
     private func navigateToLogin() {
