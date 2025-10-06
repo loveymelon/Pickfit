@@ -120,9 +120,11 @@ extension StoreProductCell: UIConfigureProtocol {
 
 // MARK: - ProductModel
 struct ProductModel {
+    let menuId: String
     let imageUrl: String?
     let title: String
     let priceText: String
     let discountPercent: Int?
     let isLiked: Bool
+    let tags: [String]
 }
