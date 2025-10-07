@@ -88,12 +88,14 @@ final class ProductDetailReactor: Reactor {
         case viewDidLoad
         case selectSize(String)
         case selectColor(String)
+        case addToCart
     }
 
     enum Mutation {
         case setViewDidLoad
         case setSelectedSize(String)
         case setSelectedColor(String)
+        case setAddToCart
     }
 
     struct State {
@@ -103,6 +105,7 @@ final class ProductDetailReactor: Reactor {
         var productInfo: ProductInfo?
         var selectedSize: String?
         var selectedColor: String?
+        var shouldDismiss: Bool = false
     }
 
     var initialState: State
@@ -121,6 +124,8 @@ final class ProductDetailReactor: Reactor {
             return Observable.just(.setSelectedSize(size))
         case .selectColor(let color):
             return Observable.just(.setSelectedColor(color))
+        case .addToCart:
+            return Observable.just(.setAddToCart)
         }
     }
 
@@ -134,8 +139,16 @@ final class ProductDetailReactor: Reactor {
             newState.selectedSize = size
         case .setSelectedColor(let color):
             newState.selectedColor = color
+        case .setAddToCart:
+            newState.shouldDismiss = true
         }
 
         return newState
+    }
+
+    // 선택된 메뉴 반환
+    func getSelectedMenu() -> StoreDetailEntity.Menu? {
+        guard let selectedSize = currentState.selectedSize else { return nil }
+        return currentState.menus.first(where: { $0.tags.contains(selectedSize) })
     }
 }

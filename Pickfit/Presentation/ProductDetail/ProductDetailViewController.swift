@@ -15,6 +15,7 @@ final class ProductDetailViewController: BaseViewController<ProductDetailView> {
     var disposeBag = DisposeBag()
 
     private let reactor: ProductDetailReactor
+    var onAddToCart: ((StoreDetailEntity.Menu, String, String) -> Void)?
 
     private lazy var dataSource = RxCollectionViewSectionedReloadDataSource<ProductDetailSection>(
         configureCell: { [weak self] dataSource, collectionView, indexPath, item in
@@ -124,15 +125,33 @@ final class ProductDetailViewController: BaseViewController<ProductDetailView> {
 
         // 장바구니 담기 버튼
         mainView.addToCartButton.rx.tap
-            .subscribe(onNext: { [weak self] in
+            .map { ProductDetailReactor.Action.addToCart }
+            .bind(to: reactor.action)
+            .disposed(by: disposeBag)
+
+        // shouldDismiss가 true가 되면 pop
+        reactor.state
+            .map { $0.shouldDismiss }
+            .distinctUntilChanged()
+            .filter { $0 }
+            .subscribe(onNext: { [weak self] _ in
                 self?.handleAddToCart()
             })
             .disposed(by: disposeBag)
     }
 
     private func handleAddToCart() {
-        // TODO: 장바구니 담기 로직 구현
-        showAlert(message: "장바구니에 담겼습니다")
+        guard let selectedMenu = reactor.getSelectedMenu(),
+              let selectedSize = reactor.currentState.selectedSize,
+              let selectedColor = reactor.currentState.selectedColor else {
+            return
+        }
+
+        // Closure로 데이터 전달
+        onAddToCart?(selectedMenu, selectedSize, selectedColor)
+
+        // 화면 pop
+        navigationController?.popViewController(animated: true)
     }
 
     private func showAlert(message: String) {

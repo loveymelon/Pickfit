@@ -20,6 +20,7 @@ final class StoreDetailReactor: Reactor {
     enum Action {
         case viewDidLoad
         case viewIsAppearing
+        case addToCart(menu: StoreDetailEntity.Menu, size: String, color: String)
     }
 
     enum Mutation {
@@ -28,6 +29,14 @@ final class StoreDetailReactor: Reactor {
         case setStoreDetail(StoreDetailEntity)
         case setError(Error)
         case logout
+        case addCartItem(StoreDetailEntity.Menu, String, String)
+    }
+
+    struct CartItem {
+        let menu: StoreDetailEntity.Menu
+        let size: String
+        let color: String
+        var quantity: Int
     }
 
     struct State {
@@ -36,6 +45,7 @@ final class StoreDetailReactor: Reactor {
         var storeDetail: StoreDetailEntity?
         var errorMessage: String?
         var shouldNavigateToLogin: Bool = false
+        var cartItems: [CartItem] = []
     }
 
     let initialState = State()
@@ -61,6 +71,10 @@ final class StoreDetailReactor: Reactor {
                     return .setError(error)
                 }
             )
+
+        case .addToCart(let menu, let size, let color):
+            print("🛒 장바구니에 추가: \(menu.name), 사이즈: \(size), 색상: \(color)")
+            return Observable.just(.addCartItem(menu, size, color))
         }
     }
 
@@ -90,6 +104,21 @@ final class StoreDetailReactor: Reactor {
 
         case .logout:
             newState.shouldNavigateToLogin = true
+
+        case .addCartItem(let menu, let size, let color):
+            // 같은 메뉴+사이즈가 이미 있는지 확인 (색상은 무시)
+            if let index = newState.cartItems.firstIndex(where: {
+                $0.menu.menuId == menu.menuId && $0.size == size
+            }) {
+                // 이미 있으면 수량만 증가 (색상은 최신 선택으로 업데이트)
+                newState.cartItems[index].quantity += 1
+                print("🛒 수량 증가: \(menu.name) (\(size)) - 수량: \(newState.cartItems[index].quantity)")
+            } else {
+                // 없으면 새로 추가
+                let newItem = CartItem(menu: menu, size: size, color: color, quantity: 1)
+                newState.cartItems.append(newItem)
+                print("🛒 새로 추가: \(menu.name) (\(size), \(color))")
+            }
         }
 
         return newState

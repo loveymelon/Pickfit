@@ -222,6 +222,20 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
             .bind(to: mainView.collectionView.rx.items(dataSource: dataSource))
             .disposed(by: disposeBag)
 
+        // 장바구니 상태 디버깅
+        reactor.state.map { $0.cartItems }
+            .distinctUntilChanged { $0.count == $1.count }
+            .subscribe(onNext: { cartItems in
+                print("\n🛒 === 장바구니 현황 ===")
+                print("총 \(cartItems.count)개 아이템")
+                for (index, item) in cartItems.enumerated() {
+                    print("  [\(index + 1)] \(item.menu.name)")
+                    print("      사이즈: \(item.size), 색상: \(item.color), 수량: \(item.quantity)")
+                }
+                print("===================\n")
+            })
+            .disposed(by: disposeBag)
+
         // 상품 선택 처리
         mainView.collectionView.rx.modelSelected(StoreDetailItem.self)
             .withUnretained(self)
@@ -243,29 +257,6 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
                 }
                 
                 return [selectedMenu] + items
-                
-//                reactor.state.storeDetail
-//                guard let self = self,
-//                      case .product(let productModel) = item,
-//                      let storeDetail = self.reactor.currentState.storeDetail else {
-//                    return nil
-//                }
-                // 선택된 menu를 배열에 먼저 추가
-//                guard let selectedMenu = storeDetail.menuList.first(where: { $0.menuId == productModel.menuId }) else {
-//                    return nil
-//                }
-//
-//                var relatedMenus: [StoreDetailEntity.Menu] = [selectedMenu]
-//
-//                // 선택된 menu의 tag들로 menuList에서 해당 menuId를 가진 아이템 찾기
-//                for tag in productModel.tags {
-//                    let menusWithTag = storeDetail.menuList.filter { menu in
-//                        menu.menuId == tag
-//                    }
-//                    relatedMenus.append(contentsOf: menusWithTag)
-//                }
-
-//                return relatedMenus
             }
             .subscribe(onNext: { [weak self] menus in
                 self?.navigateToProductDetail(menus: menus)
@@ -275,6 +266,13 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
 
     private func navigateToProductDetail(menus: [StoreDetailEntity.Menu]) {
         let productDetailVC = ProductDetailViewController(menus: menus)
+
+        // 장바구니 담기 Closure 설정
+        productDetailVC.onAddToCart = { [weak self] menu, selectedSize, selectedColor in
+            guard let self = self else { return }
+            self.reactor.action.onNext(.addToCart(menu: menu, size: selectedSize, color: selectedColor))
+        }
+
         navigationController?.pushViewController(productDetailVC, animated: true)
     }
 
