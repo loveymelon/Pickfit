@@ -262,23 +262,30 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
                 guard case .product(let productModel) = item else {
                     return nil
                 }
-                
+
                 let menuId = productModel.menuId
-                
+
                 guard let menuList = owner.reactor.currentState.storeDetail?.menuList else {
                     return nil
                 }
-                
+
                 let items = menuList.filter { $0.tags.contains(menuId) }
-                
+
                 guard let selectedMenu = menuList.first(where: { $0.menuId == menuId }) else {
                     return nil
                 }
-                
+
                 return [selectedMenu] + items
             }
             .subscribe(onNext: { [weak self] menus in
                 self?.navigateToProductDetail(menus: menus)
+            })
+            .disposed(by: disposeBag)
+
+        // 장바구니 보기 버튼 탭 처리
+        mainView.purchaseButton.rx.tap
+            .subscribe(onNext: { [weak self] in
+                self?.navigateToShoppingCart()
             })
             .disposed(by: disposeBag)
     }
@@ -297,6 +304,11 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
 
     private func navigateToLogin() {
         NotificationCenter.default.post(name: .navigateToLogin, object: nil)
+    }
+
+    private func navigateToShoppingCart() {
+        // TODO: ShoppingCartViewController 구현 후 추가
+        print("🛒 StoreDetail -> 장바구니 화면으로 이동")
     }
     
     private func makeCollectionView() -> UICollectionViewLayout {

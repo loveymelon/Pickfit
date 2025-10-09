@@ -26,7 +26,7 @@ final class HomeViewController: BaseViewController<HomeView> {
 
     private func setupNavigationBar() {
         navigationItem.leftBarButtonItem = UIBarButtonItem(customView: mainView.titleLabel)
-        navigationItem.rightBarButtonItem = UIBarButtonItem(customView: mainView.searchButton)
+        // searchButton은 제거 - BaseViewController에서 cartButton이 추가됨
     }
 
     override func bind() {

@@ -29,7 +29,7 @@ final class StoreDetailView: BaseView {
     }
 
     let purchaseButton = UIButton(type: .system).then {
-        $0.setTitle("구매하기", for: .normal)
+        $0.setTitle("장바구니 보기", for: .normal)
         $0.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         $0.backgroundColor = .black
         $0.setTitleColor(.white, for: .normal)
@@ -105,7 +105,7 @@ final class StoreDetailView: BaseView {
     // 장바구니 정보 업데이트 (수량, 총 금액)
     func updateCartInfo(totalQuantity: Int, totalPrice: Int) {
         let formattedPrice = formatPrice(totalPrice)
-        purchaseButton.setTitle("구매하기 (\(totalQuantity)개) · \(formattedPrice)원", for: .normal)
+        purchaseButton.setTitle("장바구니 보기 (\(totalQuantity)개) · \(formattedPrice)원", for: .normal)
     }
 
     private func formatPrice(_ price: Int) -> String {
