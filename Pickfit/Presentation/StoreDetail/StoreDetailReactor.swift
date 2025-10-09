@@ -29,14 +29,7 @@ final class StoreDetailReactor: Reactor {
         case setStoreDetail(StoreDetailEntity)
         case setError(Error)
         case logout
-        case addCartItem(StoreDetailEntity.Menu, String, String)
-    }
-
-    struct CartItem {
-        let menu: StoreDetailEntity.Menu
-        let size: String
-        let color: String
-        var quantity: Int
+        case updateCartItems([CartItem])
     }
 
     struct State {
@@ -74,12 +67,21 @@ final class StoreDetailReactor: Reactor {
 
         case .addToCart(let menu, let size, let color):
             print("🛒 장바구니에 추가: \(menu.name), 사이즈: \(size), 색상: \(color)")
-            return Observable.just(.addCartItem(menu, size, color))
+            CartManager.shared.addToCart(menu: menu, size: size, color: color)
+            return Observable.empty()
         }
     }
 
     func transform(mutation: Observable<Mutation>) -> Observable<Mutation> {
-        return handleAuthError(mutation: mutation, logoutMutation: .logout)
+        let cartMutation = CartManager.shared.cartItems
+            .map { Mutation.updateCartItems($0) }
+
+        let mergedMutation = Observable.merge(
+            mutation,
+            cartMutation
+        )
+
+        return handleAuthError(mutation: mergedMutation, logoutMutation: .logout)
     }
 
     func reduce(state: State, mutation: Mutation) -> State {
@@ -105,20 +107,8 @@ final class StoreDetailReactor: Reactor {
         case .logout:
             newState.shouldNavigateToLogin = true
 
-        case .addCartItem(let menu, let size, let color):
-            // 같은 메뉴+사이즈가 이미 있는지 확인 (색상은 무시)
-            if let index = newState.cartItems.firstIndex(where: {
-                $0.menu.menuId == menu.menuId && $0.size == size
-            }) {
-                // 이미 있으면 수량만 증가 (색상은 최신 선택으로 업데이트)
-                newState.cartItems[index].quantity += 1
-                print("🛒 수량 증가: \(menu.name) (\(size)) - 수량: \(newState.cartItems[index].quantity)")
-            } else {
-                // 없으면 새로 추가
-                let newItem = CartItem(menu: menu, size: size, color: color, quantity: 1)
-                newState.cartItems.append(newItem)
-                print("🛒 새로 추가: \(menu.name) (\(size), \(color))")
-            }
+        case .updateCartItems(let items):
+            newState.cartItems = items
         }
 
         return newState
