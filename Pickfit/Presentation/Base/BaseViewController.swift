@@ -46,9 +46,14 @@ class BaseViewController<T: BaseView>: UIViewController {
         }
     }
 
+    // 장바구니 버튼 숨김 (서브클래스에서 오버라이드 가능)
+    func hideCartButton() {
+        navigationItem.rightBarButtonItem = nil
+    }
+
     private func navigateToShoppingCart() {
-        // TODO: ShoppingCartViewController 구현 후 추가
-        print("🛒 장바구니 화면으로 이동")
+        let shoppingCartVC = ShoppingCartViewController()
+        navigationController?.pushViewController(shoppingCartVC, animated: true)
     }
 
     func bind() {

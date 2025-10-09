@@ -307,8 +307,8 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
     }
 
     private func navigateToShoppingCart() {
-        // TODO: ShoppingCartViewController 구현 후 추가
-        print("🛒 StoreDetail -> 장바구니 화면으로 이동")
+        let shoppingCartVC = ShoppingCartViewController()
+        navigationController?.pushViewController(shoppingCartVC, animated: true)
     }
     
     private func makeCollectionView() -> UICollectionViewLayout {

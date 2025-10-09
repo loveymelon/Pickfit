@@ -13,8 +13,8 @@ final class ShoppingCartView: BaseView {
     let tableView = UITableView().then {
         $0.backgroundColor = .white
         $0.separatorStyle = .singleLine
-        $0.rowHeight = UITableView.automaticDimension
-        $0.estimatedRowHeight = 100
+        $0.rowHeight = 130
+        $0.register(CartItemCell.self, forCellReuseIdentifier: CartItemCell.identifier)
     }
 
     let emptyLabel = UILabel().then {
@@ -26,7 +26,7 @@ final class ShoppingCartView: BaseView {
     }
 
     let purchaseButton = UIButton(type: .system).then {
-        $0.setTitle("구매하기", for: .normal)
+        $0.setTitle("주문하기", for: .normal)
         $0.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         $0.backgroundColor = .black
         $0.setTitleColor(.white, for: .normal)
@@ -65,12 +65,14 @@ final class ShoppingCartView: BaseView {
 
         purchaseButton.snp.makeConstraints {
             $0.top.equalToSuperview().offset(12)
-            $0.leading.trailing.equalToSuperview().inset(20)
+            $0.leading.equalToSuperview().offset(20)
+            $0.trailing.equalToSuperview().offset(-20)
             $0.height.equalTo(50)
         }
 
         tableView.snp.makeConstraints {
-            $0.top.leading.trailing.equalTo(safeAreaLayoutGuide)
+            $0.top.equalTo(safeAreaLayoutGuide)
+            $0.leading.trailing.equalToSuperview()
             $0.bottom.equalTo(bottomContainerView.snp.top)
         }
 
@@ -92,9 +94,15 @@ final class ShoppingCartView: BaseView {
         backgroundColor = .white
     }
 
-    func updatePurchaseButton(totalQuantity: Int, totalPrice: Int) {
+    func updatePurchaseButton(totalPrice: Int) {
         let formattedPrice = formatPrice(totalPrice)
-        purchaseButton.setTitle("구매하기 (\(totalQuantity)개) · \(formattedPrice)원", for: .normal)
+        purchaseButton.setTitle("\(formattedPrice)원 주문하기", for: .normal)
+    }
+
+    func showEmpty(_ isEmpty: Bool) {
+        emptyLabel.isHidden = !isEmpty
+        tableView.isHidden = isEmpty
+        bottomContainerView.isHidden = isEmpty
     }
 
     private func formatPrice(_ price: Int) -> String {
@@ -103,3 +111,4 @@ final class ShoppingCartView: BaseView {
         return formatter.string(from: NSNumber(value: price)) ?? "\(price)"
     }
 }
+
