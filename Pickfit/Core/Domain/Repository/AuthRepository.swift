@@ -21,6 +21,7 @@ final class AuthRepository {
         )
 
         await tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
+        await tokenStorage.writeUserId(dto.userId)
     }
 
     func refreshToken() async throws -> (accessToken: String, refreshToken: String) {

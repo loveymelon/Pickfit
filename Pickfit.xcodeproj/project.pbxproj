@@ -20,8 +20,10 @@
 		DF2D6D1B2E8A674B0045152C /* KakaoSDKAuth in Frameworks */ = {isa = PBXBuildFile; productRef = DF2D6D1A2E8A674B0045152C /* KakaoSDKAuth */; };
 		DF2D6D1D2E8A674B0045152C /* KakaoSDKCommon in Frameworks */ = {isa = PBXBuildFile; productRef = DF2D6D1C2E8A674B0045152C /* KakaoSDKCommon */; };
 		DF2D6D1F2E8A674B0045152C /* KakaoSDKUser in Frameworks */ = {isa = PBXBuildFile; productRef = DF2D6D1E2E8A674B0045152C /* KakaoSDKUser */; };
+		DF588F032E97BBCD009C58AA /* iamport-ios in Frameworks */ = {isa = PBXBuildFile; productRef = DF588F022E97BBCD009C58AA /* iamport-ios */; };
 		DF9715EF2E90349F004FF049 /* Differentiator in Frameworks */ = {isa = PBXBuildFile; productRef = DF9715EE2E90349F004FF049 /* Differentiator */; };
 		DF9715F12E90349F004FF049 /* RxDataSources in Frameworks */ = {isa = PBXBuildFile; productRef = DF9715F02E90349F004FF049 /* RxDataSources */; };
+		DFA1B0012E9A000000000001 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = DFA1B0002E9A000000000001 /* SocketIO */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -69,6 +71,8 @@
 				DF9715F12E90349F004FF049 /* RxDataSources in Frameworks */,
 				DF2D6CFD2E8A5F880045152C /* RxSwift in Frameworks */,
 				DF2D6D1B2E8A674B0045152C /* KakaoSDKAuth in Frameworks */,
+				DF588F032E97BBCD009C58AA /* iamport-ios in Frameworks */,
+				DFA1B0012E9A000000000001 /* SocketIO in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -126,6 +130,8 @@
 				DF2D6D1E2E8A674B0045152C /* KakaoSDKUser */,
 				DF9715EE2E90349F004FF049 /* Differentiator */,
 				DF9715F02E90349F004FF049 /* RxDataSources */,
+				DF588F022E97BBCD009C58AA /* iamport-ios */,
+				DFA1B0002E9A000000000001 /* SocketIO */,
 			);
 			productName = Pickfit;
 			productReference = DF2D6C1F2E8A57AF0045152C /* Pickfit.app */;
@@ -165,6 +171,8 @@
 				DF2D6D042E8A5FAB0045152C /* XCRemoteSwiftPackageReference "Then" */,
 				DF2D6D192E8A674B0045152C /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */,
 				DF9715ED2E90349F004FF049 /* XCRemoteSwiftPackageReference "RxDataSources" */,
+				DF588F012E97BBCD009C58AA /* XCRemoteSwiftPackageReference "iamport-ios" */,
+				DFA1AFFF2E9A000000000001 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DF2D6C202E8A57AF0045152C /* Products */;
@@ -458,7 +466,7 @@
 			repositoryURL = "https://github.com/devxoul/Then.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 3.0.0;
+				minimumVersion = 2.7.0;
 			};
 		};
 		DF2D6D192E8A674B0045152C /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */ = {
@@ -469,12 +477,28 @@
 				kind = branch;
 			};
 		};
+		DF588F012E97BBCD009C58AA /* XCRemoteSwiftPackageReference "iamport-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/iamport/iamport-ios.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 		DF9715ED2E90349F004FF049 /* XCRemoteSwiftPackageReference "RxDataSources" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/RxSwiftCommunity/RxDataSources.git";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 5.0.2;
+			};
+		};
+		DFA1AFFF2E9A000000000001 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/socketio/socket.io-client-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 16.1.1;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -540,6 +564,11 @@
 			package = DF2D6D192E8A674B0045152C /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */;
 			productName = KakaoSDKUser;
 		};
+		DF588F022E97BBCD009C58AA /* iamport-ios */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DF588F012E97BBCD009C58AA /* XCRemoteSwiftPackageReference "iamport-ios" */;
+			productName = "iamport-ios";
+		};
 		DF9715EE2E90349F004FF049 /* Differentiator */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = DF9715ED2E90349F004FF049 /* XCRemoteSwiftPackageReference "RxDataSources" */;
@@ -549,6 +578,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = DF9715ED2E90349F004FF049 /* XCRemoteSwiftPackageReference "RxDataSources" */;
 			productName = RxDataSources;
+		};
+		DFA1B0002E9A000000000001 /* SocketIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFA1AFFF2E9A000000000001 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */;
+			productName = SocketIO;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
