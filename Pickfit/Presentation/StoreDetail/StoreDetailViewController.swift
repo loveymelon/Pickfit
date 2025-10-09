@@ -222,17 +222,36 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
             .bind(to: mainView.collectionView.rx.items(dataSource: dataSource))
             .disposed(by: disposeBag)
 
-        // 장바구니 상태 디버깅
+        // 장바구니 상태 변경 시 버튼 표시/숨김 및 정보 업데이트
         reactor.state.map { $0.cartItems }
-            .distinctUntilChanged { $0.count == $1.count }
-            .subscribe(onNext: { cartItems in
+            .subscribe(onNext: { [weak self] cartItems in
                 print("\n🛒 === 장바구니 현황 ===")
-                print("총 \(cartItems.count)개 아이템")
+                print("총 \(cartItems.count)개 종류")
+
+                // 총 수량과 총 금액 계산
+                var totalQuantity = 0
+                var totalPrice = 0
+
                 for (index, item) in cartItems.enumerated() {
                     print("  [\(index + 1)] \(item.menu.name)")
                     print("      사이즈: \(item.size), 색상: \(item.color), 수량: \(item.quantity)")
+                    print("      가격: \(item.menu.price)원 × \(item.quantity) = \(item.menu.price * item.quantity)원")
+
+                    totalQuantity += item.quantity
+                    totalPrice += item.menu.price * item.quantity
                 }
+
+                print("총 수량: \(totalQuantity)개")
+                print("총 금액: \(totalPrice)원")
                 print("===================\n")
+
+                // 장바구니가 비어있지 않으면 버튼 표시 및 정보 업데이트
+                let shouldShowCart = !cartItems.isEmpty
+                self?.mainView.setCartBottomViewVisible(shouldShowCart)
+
+                if shouldShowCart {
+                    self?.mainView.updateCartInfo(totalQuantity: totalQuantity, totalPrice: totalPrice)
+                }
             })
             .disposed(by: disposeBag)
 
