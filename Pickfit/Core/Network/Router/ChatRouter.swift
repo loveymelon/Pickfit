@@ -9,6 +9,7 @@ import Foundation
 import Alamofire
 
 enum ChatRouter: Router {
+    case fetchChatRoomList
     case fetchChatHistory(roomId: String, next: String?)
     case sendMessage(roomId: String, content: String, files: [String])
 }
@@ -16,6 +17,8 @@ enum ChatRouter: Router {
 extension ChatRouter {
     var method: HTTPMethod {
         switch self {
+        case .fetchChatRoomList:
+            return .get
         case .fetchChatHistory:
             return .get
         case .sendMessage:
@@ -25,6 +28,8 @@ extension ChatRouter {
 
     var path: String {
         switch self {
+        case .fetchChatRoomList:
+            return "/chats"
         case .fetchChatHistory(let roomId, _):
             return "/chats/\(roomId)"
         case .sendMessage(let roomId, _, _):
@@ -41,6 +46,9 @@ extension ChatRouter {
 
     var parameters: Parameters? {
         switch self {
+        case .fetchChatRoomList:
+            return nil
+
         case .fetchChatHistory(_, let next):
             if let next = next {
                 return ["next": next]
@@ -54,6 +62,9 @@ extension ChatRouter {
 
     var body: Data? {
         switch self {
+        case .fetchChatRoomList:
+            return nil
+
         case .fetchChatHistory:
             return nil
 
@@ -68,6 +79,8 @@ extension ChatRouter {
 
     var encodingType: EncodingType {
         switch self {
+        case .fetchChatRoomList:
+            return .url
         case .fetchChatHistory:
             return .url
         case .sendMessage:
