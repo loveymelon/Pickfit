@@ -27,4 +27,31 @@ final class OrderRepository {
         let entity = OrderMapper.toEntity(dto)
         return entity
     }
+
+    func validatePayment(impUid: String) async throws -> PaymentValidationEntity {
+        let dto = try await NetworkManager.shared.fetch(
+            dto: PaymentValidationResponseDTO.self,
+            router: OrderRouter.validatePayment(impUid: impUid)
+        )
+
+        return PaymentValidationMapper.toEntity(dto)
+    }
+
+    func fetchOrderList() async throws -> [OrderHistoryEntity] {
+        print("📡 [OrderRepository] 주문 목록 API 호출 시작")
+
+        do {
+            let dto = try await NetworkManager.shared.fetch(
+                dto: OrderListResponseDTO.self,
+                router: OrderRouter.fetchOrderList
+            )
+
+            print("✅ [OrderRepository] 주문 목록 API 성공 - \(dto.data.count)개")
+            return OrderHistoryMapper.toEntities(dto.data)
+
+        } catch {
+            print("❌ [OrderRepository] 주문 목록 API 실패: \(error)")
+            throw error
+        }
+    }
 }
