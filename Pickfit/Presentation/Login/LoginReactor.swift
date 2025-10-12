@@ -20,7 +20,8 @@ final class LoginReactor: Reactor {
     }
 
     enum Action {
-        case loginButtonTapped
+        case kakaoLoginButtonTapped
+        case appleLoginButtonTapped
     }
 
     enum Mutation {
@@ -39,7 +40,7 @@ final class LoginReactor: Reactor {
 
     func mutate(action: Action) -> Observable<Mutation> {
         switch action {
-        case .loginButtonTapped:
+        case .kakaoLoginButtonTapped:
             return run(
                 operation: { send in
                     send(.setLoading(true))
@@ -47,6 +48,24 @@ final class LoginReactor: Reactor {
                     let kakaoToken = try await self.loginManager.kakaoLogin()
                     // 2. 서버 로그인 및 토큰 저장 (Repository에서 처리)
                     try await self.authRepository.loginWithKakao(oauthToken: kakaoToken)
+                    send(.setLoginSuccess)
+                },
+                onError: { error in
+                    .setLoginFailure(error)
+                }
+            )
+
+        case .appleLoginButtonTapped:
+            return run(
+                operation: { send in
+                    send(.setLoading(true))
+                    // 1. 애플 identityToken과 nickname 획득
+                    let (identityToken, nickname) = try await self.loginManager.appleLogin()
+                    // 2. 서버 로그인 및 토큰 저장 (Repository에서 처리)
+                    try await self.authRepository.loginWithApple(
+                        identityToken: identityToken,
+                        nickname: nickname
+                    )
                     send(.setLoginSuccess)
                 },
                 onError: { error in

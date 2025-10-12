@@ -23,18 +23,34 @@ final class LoginViewController: BaseViewController<LoginView> {
 
     override func bind() {
         let canLogin = reactor.state.map { !$0.isLoading }.distinctUntilChanged()
-        
-        mainView.signInButton.rx.tap
+
+        // 카카오 로그인 버튼
+        mainView.kakaoSignInButton.rx.tap
             .withLatestFrom(canLogin)
             .filter { $0 }
             .throttle(.milliseconds(500), scheduler: MainScheduler.instance)
-            .map { _ in LoginReactor.Action.loginButtonTapped }
+            .map { _ in LoginReactor.Action.kakaoLoginButtonTapped }
             .bind(to: reactor.action)
+            .disposed(by: disposeBag)
+
+        // 애플 로그인 버튼
+        mainView.appleSignInButton.rx.controlEvent(.touchUpInside)
+            .withLatestFrom(canLogin)
+            .filter { $0 }
+            .throttle(.milliseconds(500), scheduler: MainScheduler.instance)
+            .map { _ in LoginReactor.Action.appleLoginButtonTapped }
+            .bind(to: reactor.action)
+            .disposed(by: disposeBag)
+
+        // 버튼 활성화 상태
+        reactor.state.map { !$0.isLoading }
+            .distinctUntilChanged()
+            .bind(to: mainView.kakaoSignInButton.rx.isEnabled)
             .disposed(by: disposeBag)
 
         reactor.state.map { !$0.isLoading }
             .distinctUntilChanged()
-            .bind(to: mainView.signInButton.rx.isEnabled)
+            .bind(to: mainView.appleSignInButton.rx.isEnabled)
             .disposed(by: disposeBag)
 
         reactor.state.compactMap { $0.errorMessage }

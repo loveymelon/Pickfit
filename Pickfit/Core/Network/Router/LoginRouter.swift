@@ -10,13 +10,14 @@ import Alamofire
 
 enum LoginRouter: Router {
     case kakaoLogin(KakaoRequestDTO)
+    case appleLogin(AppleRequestDTO)
     case refreshToken(RefreshTokenRequestDTO)
 }
 
 extension LoginRouter {
     var method: HTTPMethod {
         switch self {
-        case .kakaoLogin:
+        case .kakaoLogin, .appleLogin:
             return .post
         case .refreshToken:
             return .get
@@ -27,6 +28,8 @@ extension LoginRouter {
         switch self {
         case .kakaoLogin:
             return "/users/login/kakao"
+        case .appleLogin:
+            return "/users/login/apple"
         case .refreshToken:
             return "/auth/refresh"
         }
@@ -34,7 +37,7 @@ extension LoginRouter {
 
     var optionalHeaders: HTTPHeaders? {
         switch self {
-        case .kakaoLogin:
+        case .kakaoLogin, .appleLogin:
             return HTTPHeaders([
                 HTTPHeader(name: "SeSACKey", value: APIKey.sesacKey),
                 HTTPHeader(name: "accept", value: "application/json")
@@ -51,7 +54,7 @@ extension LoginRouter {
 
     var parameters: Parameters? {
         switch self {
-        case .kakaoLogin:
+        case .kakaoLogin, .appleLogin:
             return nil
         case .refreshToken:
             return nil
@@ -62,6 +65,8 @@ extension LoginRouter {
         switch self {
         case let .kakaoLogin(requestDTO):
             return requestToBody(requestDTO)
+        case let .appleLogin(requestDTO):
+            return requestToBody(requestDTO)
         case .refreshToken:
             return nil
         }
@@ -69,7 +74,7 @@ extension LoginRouter {
 
     var encodingType: EncodingType {
         switch self {
-        case .kakaoLogin:
+        case .kakaoLogin, .appleLogin:
             return .json
         case .refreshToken:
             return .url
