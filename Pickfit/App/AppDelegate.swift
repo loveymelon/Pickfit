@@ -7,6 +7,7 @@
 
 import UIKit
 import KakaoSDKCommon
+import iamport_ios
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -15,6 +16,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Override point for customization after application launch.
         KakaoSDK.initSDK(appKey: APIKey.kakaoKey)
 
+        // CoreData + CloudKit 초기화
+        _ = CoreDataManager.shared.persistentContainer
+
+        return true
+    }
+    
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+        Iamport.shared.receivedURL(url)
+        
         return true
     }
 

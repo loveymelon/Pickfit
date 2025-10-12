@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23231" systemVersion="24G90" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+    <entity name="Message" representedClassName="Message" syncable="YES">
+        <attribute name="chatId" optional="YES" attributeType="String" spotlightIndexingEnabled="YES"/>
+        <attribute name="content" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="String" spotlightIndexingEnabled="YES"/>
+        <attribute name="filesJSON" optional="YES" attributeType="String"/>
+        <attribute name="isMyMessage" optional="YES" attributeType="Boolean" usesScalarValueType="NO"/>
+        <attribute name="roomId" optional="YES" attributeType="String" spotlightIndexingEnabled="YES"/>
+        <attribute name="senderId" optional="YES" attributeType="String"/>
+        <attribute name="senderNick" optional="YES" attributeType="String"/>
+        <attribute name="senderProfileImage" optional="YES" attributeType="String"/>
+        <attribute name="updatedAt" optional="YES" attributeType="String"/>
+    </entity>
+</model>
