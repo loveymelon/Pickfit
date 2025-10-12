@@ -20,10 +20,20 @@ actor NetworkManager {
 
     func fetch<T: DTO, R: Router>(dto: T.Type, router: R) async throws -> T {
         let request = try router.asURLRequest()
+        let hasAuth = interceptor != nil
+
+        print("📡 [Network] Starting request")
+        print("   🌐 URL: \(request.url?.absoluteString ?? "nil")")
+        print("   📋 Method: \(request.httpMethod ?? "nil")")
+        print("   🔐 Has Interceptor: \(hasAuth)")
+        print("   📋 Headers: \(request.allHTTPHeaderFields ?? [:])")
 
         let response = await getResponse(dto: dto, request: request)
 
         let result = try getResult(dto: dto, response: response)
+
+        print("✅ [Network] Request successful")
+        print("   🌐 URL: \(request.url?.path ?? "nil")")
 
         return result
     }
@@ -49,20 +59,27 @@ extension NetworkManager {
             return data
 
         case let .failure(error):
+            print("❌ [Network Error] Request failed")
+            print("   🌐 URL: \(response.request?.url?.absoluteString ?? "nil")")
+            print("   📊 AFError: \(error)")
+
             // 401, 418 에러는 NetworkError.unauthorized로 변환
             if let statusCode = response.response?.statusCode {
-                print("❌ [Network] Request failed - Status: \(statusCode), URL: \(response.request?.url?.path ?? "unknown")")
+                print("   📊 Status Code: \(statusCode)")
                 if let data = response.data, let errorMessage = String(data: data, encoding: .utf8) {
-                    print("❌ [Network] Error response: \(errorMessage)")
+                    print("   📄 Error response body: \(errorMessage)")
                 }
 
                 if statusCode == 401 || statusCode == 403 || statusCode == 418 {
+                    print("   ⚠️ Auth error - Throwing NetworkError.unauthorized")
                     throw NetworkError.unauthorized
                 }
             } else {
-                print("❌ [Network] Request failed - No status code, Error: \(error.localizedDescription)")
+                print("   ⚠️ No HTTP status code")
+                print("   📄 Error description: \(error.localizedDescription)")
             }
 
+            print("   ⚠️ Throwing NetworkError.serverError")
             throw NetworkError.serverError(error)
         }
     }

@@ -19,13 +19,19 @@ final class AuthInterceptor: RequestInterceptor {
     func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {
         Task {
             var request = urlRequest
+            let requestPath = urlRequest.url?.path ?? "unknown"
+            let requestMethod = urlRequest.httpMethod ?? "unknown"
 
             // AccessToken을 헤더에 추가
             if let accessToken = await tokenStorage.readAccess() {
-                print("🔐 [Auth] Request: \(urlRequest.url?.path ?? "unknown") - Token exists")
+                print("🔐 [Auth Adapt] \(requestMethod) \(requestPath)")
+                print("   ✅ Token exists: \(accessToken.prefix(30))...")
+                print("   📋 Headers before: \(request.allHTTPHeaderFields ?? [:])")
                 request.setValue(accessToken, forHTTPHeaderField: "Authorization")
+                print("   📋 Headers after: \(request.allHTTPHeaderFields ?? [:])")
             } else {
-                print("🔐 [Auth] Request: \(urlRequest.url?.path ?? "unknown") - No token")
+                print("🔐 [Auth Adapt] \(requestMethod) \(requestPath)")
+                print("   ⚠️ No token available")
             }
 
             completion(.success(request))
@@ -34,40 +40,50 @@ final class AuthInterceptor: RequestInterceptor {
 
     // MARK: - RequestRetrier
     func retry(_ request: Request, for session: Session, dueTo error: Error, completion: @escaping (RetryResult) -> Void) {
+        let requestPath = request.request?.url?.path ?? "unknown"
+        let requestMethod = request.request?.httpMethod ?? "unknown"
+
+        print("🔄 [Auth Retry] \(requestMethod) \(requestPath)")
+        print("   🔍 Error: \(error.localizedDescription)")
+
         guard let response = request.task?.response as? HTTPURLResponse else {
+            print("   ⚠️ No HTTP response - Do not retry")
             completion(.doNotRetry)
             return
         }
 
         let statusCode = response.statusCode
+        print("   📊 Status Code: \(statusCode)")
 
         Task {
             switch statusCode {
             case 419:
-                print("❌ [Error] 419 - Token expired for: \(request.request?.url?.path ?? "unknown")")
+                print("   ❌ 419 - Token expired")
                 // AccessToken 만료 → RefreshToken으로 갱신 후 재시도
                 do {
-                    print("🔄 [Refresh] Starting token refresh...")
+                    print("   🔄 Starting token refresh...")
                     _ = try await TokenRefreshCoordinator.shared.refresh {
                         try await self.refreshTokens()
                     }
-                    print("✅ [Refresh] Token refresh successful - Retrying request")
+                    print("   ✅ Token refresh successful - Retrying request")
                     completion(.retry)
                 } catch {
-                    print("❌ [Refresh] Token refresh failed: \(error.localizedDescription)")
+                    print("   ❌ Token refresh failed: \(error.localizedDescription)")
+                    print("   🗑️ Clearing tokens...")
                     // RefreshToken 갱신 실패 → 토큰 삭제 후 에러 전파
                     await tokenStorage.clear()
                     completion(.doNotRetry)
                 }
 
             case 401, 403, 418:
-                print("❌ [Error] \(statusCode) - Auth failed for: \(request.request?.url?.path ?? "unknown")")
+                print("   ❌ \(statusCode) - Auth failed (Critical)")
+                print("   🗑️ Clearing tokens...")
                 // 인증 불가능 또는 RefreshToken 만료 → 토큰 삭제 후 에러 전파
                 await tokenStorage.clear()
                 completion(.doNotRetry)
 
             default:
-                print("❌ [Error] \(statusCode) - Request failed: \(request.request?.url?.path ?? "unknown")")
+                print("   ❌ \(statusCode) - Request failed (Not auth related)")
                 // 기타 에러는 재시도 안함
                 completion(.doNotRetry)
             }
