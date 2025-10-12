@@ -31,15 +31,30 @@ final class MainTabBarController: UITabBarController {
             selectedImage: UIImage(systemName: "house.fill")
         )
 
-        // 추후 추가될 탭들
-        // let searchVC = SearchViewController()
-        // let searchNav = UINavigationController(rootViewController: searchVC)
-        // searchNav.tabBarItem = UITabBarItem(title: "검색", image: UIImage(systemName: "magnifyingglass"), selectedImage: nil)
+        let orderHistoryVC = OrderHistoryViewController()
+        let orderHistoryNav = UINavigationController(rootViewController: orderHistoryVC)
+        orderHistoryNav.tabBarItem = UITabBarItem(
+            title: "주문",
+            image: UIImage(named: "orderEmpty"),
+            selectedImage: UIImage(named: "orderFill")
+        )
 
-        // let profileVC = ProfileViewController()
-        // let profileNav = UINavigationController(rootViewController: profileVC)
-        // profileNav.tabBarItem = UITabBarItem(title: "마이", image: UIImage(systemName: "person"), selectedImage: UIImage(systemName: "person.fill"))
+        let chatListVC = ChatListViewController()
+        let chatListNav = UINavigationController(rootViewController: chatListVC)
+        chatListNav.tabBarItem = UITabBarItem(
+            title: "채팅",
+            image: UIImage(systemName: "message.circle"),
+            selectedImage: UIImage(systemName: "message.circle.fill")
+        )
 
-        viewControllers = [homeNav]
+        let myPageVC = MyPageViewController()
+        let myPageNav = UINavigationController(rootViewController: myPageVC)
+        myPageNav.tabBarItem = UITabBarItem(
+            title: "마이",
+            image: UIImage(systemName: "person"),
+            selectedImage: UIImage(systemName: "person.fill")
+        )
+
+        viewControllers = [homeNav, orderHistoryNav, chatListNav, myPageNav]
     }
 }
