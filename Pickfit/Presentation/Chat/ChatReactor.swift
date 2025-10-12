@@ -22,6 +22,7 @@ final class ChatReactor: Reactor {
         case viewDidLoad
         case sendMessage(String)
         case loadMoreMessages
+        case updateMessageText(String)
     }
 
     enum Mutation {
@@ -30,12 +31,15 @@ final class ChatReactor: Reactor {
         case appendMessages([ChatMessageEntity])
         case setLoading(Bool)
         case setError(String)
+        case setMessageText(String)
     }
 
     struct State {
         var messages: [ChatMessageEntity] = []
         var isLoading: Bool = false
         var errorMessage: String?
+        var messageText: String = ""
+        var isSendButtonEnabled: Bool = false
     }
 
     let initialState = State()
@@ -53,6 +57,9 @@ final class ChatReactor: Reactor {
 
         case .loadMoreMessages:
             return loadPreviousMessages()
+
+        case .updateMessageText(let text):
+            return .just(.setMessageText(text))
         }
     }
 
@@ -78,6 +85,11 @@ final class ChatReactor: Reactor {
         case .setError(let error):
             newState.errorMessage = error
             newState.isLoading = false
+
+        case .setMessageText(let text):
+            newState.messageText = text
+            // 공백 제거 후 비어있지 않으면 전송 버튼 활성화
+            newState.isSendButtonEnabled = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
 
         return newState
