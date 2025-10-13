@@ -8,7 +8,7 @@
 import Foundation
 import CoreData
 
-@objc(ChatMessageMO)
-public class ChatMessageMO: NSManagedObject {
+@objc(Message)
+public class Message: NSManagedObject {
 
 }

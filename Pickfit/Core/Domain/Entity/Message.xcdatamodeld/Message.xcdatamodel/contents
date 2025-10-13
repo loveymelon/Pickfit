@@ -11,5 +11,11 @@
         <attribute name="senderNick" optional="YES" attributeType="String"/>
         <attribute name="senderProfileImage" optional="YES" attributeType="String"/>
         <attribute name="updatedAt" optional="YES" attributeType="String"/>
+        <fetchIndex name="byChatId">
+            <fetchIndexElement property="chatId" type="Binary" order="ascending"/>
+        </fetchIndex>
+        <fetchIndex name="byRoomId">
+            <fetchIndexElement property="roomId" type="Binary" order="ascending"/>
+        </fetchIndex>
     </entity>
 </model>

@@ -8,10 +8,10 @@
 import Foundation
 import CoreData
 
-extension ChatMessageMO {
+extension Message {
 
-    @nonobjc public class func fetchRequest() -> NSFetchRequest<ChatMessageMO> {
-        return NSFetchRequest<ChatMessageMO>(entityName: "Message")
+    @nonobjc public class func fetchRequest() -> NSFetchRequest<Message> {
+        return NSFetchRequest<Message>(entityName: "Message")
     }
 
     @NSManaged public var chatId: String?
@@ -27,6 +27,6 @@ extension ChatMessageMO {
 
 }
 
-extension ChatMessageMO : Identifiable {
+extension Message : Identifiable {
 
 }
