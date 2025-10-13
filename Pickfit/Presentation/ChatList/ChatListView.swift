@@ -52,7 +52,7 @@ final class ChatListView: BaseView {
     }
 
     private let recentChatsLabel = UILabel().then {
-        $0.text = "Recent Chats"
+        $0.text = "채팅 목록"
         $0.font = .systemFont(ofSize: 16, weight: .semibold)
         $0.textColor = .darkGray
     }

@@ -54,15 +54,37 @@ final class ChatMessageCell: UITableViewCell {
         contentView.addSubview(timeLabel)
     }
 
-    func configure(with message: ChatMessageEntity) {
+    func configure(with message: ChatMessageEntity, showTime: Bool = true, showProfile: Bool = true) {
+        print("🔧 [ChatMessageCell] Configuring cell")
+        print("  - isMyMessage: \(message.isMyMessage)")
+        print("  - content: \(message.content)")
+        print("  - showTime: \(showTime)")
+        print("  - showProfile: \(showProfile)")
+
         isMyMessage = message.isMyMessage
         messageLabel.text = message.content
 
-        // 시간 포맷
-        timeLabel.text = formatTime(message.createdAt)
+        // 시간 표시 여부
+        if showTime {
+            timeLabel.text = formatTime(message.createdAt)
+            timeLabel.isHidden = false
+        } else {
+            timeLabel.isHidden = true
+        }
+
+        // 프로필 표시 여부 결정
+        if isMyMessage {
+            // 내 메시지는 항상 프로필 숨김
+            profileImageView.isHidden = true
+        } else {
+            // 상대방 메시지는 showProfile 값에 따라
+            profileImageView.isHidden = !showProfile
+        }
 
         // 레이아웃 업데이트
         updateLayout()
+
+        print("✅ [ChatMessageCell] Cell configured")
     }
 
     private func updateLayout() {
@@ -92,25 +114,36 @@ final class ChatMessageCell: UITableViewCell {
             timeLabel.snp.makeConstraints {
                 $0.trailing.equalTo(messageBubble.snp.leading).offset(-6)
                 $0.bottom.equalTo(messageBubble)
+                $0.height.equalTo(12)
             }
 
         } else {
             // 상대방 메시지 (왼쪽 정렬, 회색)
-            profileImageView.isHidden = false
             messageBubble.backgroundColor = .systemGray6
             messageLabel.textColor = .black
 
-            profileImageView.snp.makeConstraints {
-                $0.leading.equalToSuperview().offset(16)
-                $0.top.equalToSuperview().offset(4)
-                $0.width.height.equalTo(32)
-            }
+            if profileImageView.isHidden {
+                // 프로필 숨김 → messageBubble을 왼쪽에 배치 (프로필 영역만큼 들여쓰기)
+                messageBubble.snp.makeConstraints {
+                    $0.top.equalToSuperview().offset(4)
+                    $0.leading.equalToSuperview().offset(16 + 32 + 8)  // leading + 프로필 크기 + spacing
+                    $0.bottom.equalToSuperview().offset(-4)
+                    $0.width.lessThanOrEqualTo(250)
+                }
+            } else {
+                // 프로필 표시 → 정상 레이아웃
+                profileImageView.snp.makeConstraints {
+                    $0.leading.equalToSuperview().offset(16)
+                    $0.top.equalToSuperview().offset(4)
+                    $0.width.height.equalTo(32)
+                }
 
-            messageBubble.snp.makeConstraints {
-                $0.top.equalToSuperview().offset(4)
-                $0.leading.equalTo(profileImageView.snp.trailing).offset(8)
-                $0.bottom.equalToSuperview().offset(-4)
-                $0.width.lessThanOrEqualTo(250)
+                messageBubble.snp.makeConstraints {
+                    $0.top.equalToSuperview().offset(4)
+                    $0.leading.equalTo(profileImageView.snp.trailing).offset(8)
+                    $0.bottom.equalToSuperview().offset(-4)
+                    $0.width.lessThanOrEqualTo(250)
+                }
             }
 
             messageLabel.snp.makeConstraints {
@@ -120,23 +153,33 @@ final class ChatMessageCell: UITableViewCell {
             timeLabel.snp.makeConstraints {
                 $0.leading.equalTo(messageBubble.snp.trailing).offset(6)
                 $0.bottom.equalTo(messageBubble)
+                $0.height.equalTo(12)
             }
         }
     }
 
     private func formatTime(_ dateString: String) -> String {
         let isoFormatter = ISO8601DateFormatter()
-        guard let date = isoFormatter.date(from: dateString) else { return "" }
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        guard let date = isoFormatter.date(from: dateString) else {
+            print("❌ [formatTime] Failed to parse date: \(dateString)")
+            return ""
+        }
 
         let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        formatter.locale = Locale(identifier: "en_US")
-        return formatter.string(from: date)
+        formatter.dateFormat = "a h:mm"
+        formatter.locale = Locale(identifier: "ko_KR")
+        let result = formatter.string(from: date)
+        print("✅ [formatTime] \(dateString) → \(result)")
+        return result
     }
 
     override func prepareForReuse() {
         super.prepareForReuse()
         messageLabel.text = nil
         timeLabel.text = nil
+        timeLabel.isHidden = false
+        profileImageView.isHidden = false  // 재사용 시 프로필 초기화
     }
 }

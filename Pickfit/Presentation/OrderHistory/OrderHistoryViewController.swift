@@ -25,7 +25,7 @@ final class OrderHistoryViewController: BaseViewController<OrderHistoryView> {
     }
 
     private func setupNavigationBar() {
-        title = "주문 현황"
+//        title = "주문 현황"
         navigationController?.navigationBar.prefersLargeTitles = false
     }
 

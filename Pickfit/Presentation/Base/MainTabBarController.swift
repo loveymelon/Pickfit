@@ -43,8 +43,8 @@ final class MainTabBarController: UITabBarController {
         let chatListNav = UINavigationController(rootViewController: chatListVC)
         chatListNav.tabBarItem = UITabBarItem(
             title: "채팅",
-            image: UIImage(systemName: "message.circle"),
-            selectedImage: UIImage(systemName: "message.circle.fill")
+            image: UIImage(named: "messageCircle"),
+            selectedImage: UIImage(named: "messageCircle")
         )
 
         let myPageVC = MyPageViewController()
