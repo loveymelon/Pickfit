@@ -59,18 +59,22 @@ final class ChatRepository {
 
     /// Socket으로 실시간 메시지 수신 (CoreData 자동 저장)
     func connectToChat(roomId: String) -> AsyncStream<Result<ChatMessageEntity, NetworkError>> {
+        print("🔌 [ChatRepository] Creating socket stream for room: \(roomId)")
         let socketStream = SocketIOManager.shared.connectDTO(
             to: .chat(roomId: roomId),
             type: ChatMessageDTO.self
         )
 
         let currentUserId = KeychainAuthStorage.shared.readUserIdSync() ?? ""
+        print("👤 [ChatRepository] Current user ID: \(currentUserId)")
 
         return AsyncStream { continuation in
             Task {
+                print("🔄 [ChatRepository] Starting to listen to socket stream")
                 for await result in socketStream {
                     switch result {
                     case .success(let dto):
+                        print("✅ [ChatRepository] Received message DTO")
                         let entity = ChatMessageMapper.toEntity(dto, currentUserId: currentUserId)
 
                         // 🔥 Socket 메시지를 CoreData에 자동 저장
@@ -79,21 +83,14 @@ final class ChatRepository {
                         continuation.yield(.success(entity))
 
                     case .failure(let error):
+                        print("❌ [ChatRepository] Socket stream error: \(error)")
                         continuation.yield(.failure(error))
                     }
                 }
+                print("🔌 [ChatRepository] Socket stream ended")
                 continuation.finish()
             }
         }
-    }
-
-    /// Socket으로 메시지 전송 (텍스트 전용)
-    func sendMessage(content: String, files: [String] = []) {
-        let data: [String: Any] = [
-            "content": content,
-            "files": files
-        ]
-        SocketIOManager.shared.sendMessage(event: "message", data: data)
     }
 
     /// Socket 연결 종료
