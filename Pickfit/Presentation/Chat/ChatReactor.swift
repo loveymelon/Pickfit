@@ -13,6 +13,10 @@ final class ChatReactor: Reactor {
     private let chatRepository: ChatRepository
     private let roomId: String
 
+    // 임시 큐: 초기 로딩 중 소켓 메시지 저장
+    private var pendingSocketMessages: [ChatMessageEntity] = []
+    private var isInitialLoadComplete: Bool = false
+
     init(roomId: String, chatRepository: ChatRepository = ChatRepository()) {
         self.roomId = roomId
         self.chatRepository = chatRepository
@@ -23,20 +27,27 @@ final class ChatReactor: Reactor {
         case sendMessage(String)
         case loadMoreMessages
         case updateMessageText(String)
+        case resetPrependedCount  // prependedCount 초기화용
     }
 
     enum Mutation {
         case setMessages([ChatMessageEntity])
         case appendMessage(ChatMessageEntity)
         case appendMessages([ChatMessageEntity])
+        case prependMessages([ChatMessageEntity], count: Int)  // insertRows용 (count 필수)
         case setLoading(Bool)
         case setError(String)
         case setMessageText(String)
+        case flushPendingMessages([ChatMessageEntity]) // 임시 큐 플러시
+        case setPrependedCount(Int)  // insertRows 트리거용
+        case setLoadingMore(Bool)  // pagination 중복 방지
     }
 
     struct State {
         var messages: [ChatMessageEntity] = []
         var isLoading: Bool = false
+        var isLoadingMore: Bool = false  // pagination 로딩 상태
+        var prependedCount: Int = 0  // 방금 추가된 메시지 개수 (insertRows용)
         var errorMessage: String?
         var messageText: String = ""
         var isSendButtonEnabled: Bool = false
@@ -47,9 +58,10 @@ final class ChatReactor: Reactor {
     func mutate(action: Action) -> Observable<Mutation> {
         switch action {
         case .viewDidLoad:
-            return Observable.concat([
-                loadInitialMessages(),
-                connectToSocket()
+            // 소켓 연결과 초기 로딩을 병렬 실행
+            return Observable.merge([
+                connectToSocket(),        // 즉시 소켓 연결 (임시 큐 사용)
+                loadInitialMessages()     // CoreData 또는 REST API로 초기 메시지 로드
             ])
 
         case .sendMessage(let content):
@@ -60,6 +72,9 @@ final class ChatReactor: Reactor {
 
         case .updateMessageText(let text):
             return .just(.setMessageText(text))
+
+        case .resetPrependedCount:
+            return .just(.setPrependedCount(0))
         }
     }
 
@@ -68,102 +83,243 @@ final class ChatReactor: Reactor {
 
         switch mutation {
         case .setMessages(let messages):
+            print("🔄 [Reduce] setMessages: \(messages.count) messages")
             newState.messages = messages
             newState.isLoading = false
 
         case .appendMessage(let message):
+            print("🔄 [Reduce] appendMessage: \(message.content)")
             newState.messages.append(message)
 
         case .appendMessages(let messages):
+            print("🔄 [Reduce] appendMessages: \(messages.count) messages")
             // 이전 메시지는 앞에 추가
             newState.messages = messages + newState.messages
             newState.isLoading = false
 
+        case .prependMessages(let messages, let count):
+            print("🔄 [Reduce] prependMessages: \(count) messages")
+            // insertRows용: 배열 앞에 추가
+            newState.messages = messages + newState.messages
+            newState.isLoadingMore = false
+
         case .setLoading(let isLoading):
+            print("🔄 [Reduce] setLoading: \(isLoading)")
             newState.isLoading = isLoading
 
+        case .setLoadingMore(let isLoading):
+            print("🔄 [Reduce] setLoadingMore: \(isLoading)")
+            newState.isLoadingMore = isLoading
+
+        case .setPrependedCount(let count):
+            print("🔄 [Reduce] setPrependedCount: \(count)")
+            newState.prependedCount = count
+
         case .setError(let error):
+            print("🔄 [Reduce] setError: \(error)")
             newState.errorMessage = error
             newState.isLoading = false
+            newState.isLoadingMore = false
 
         case .setMessageText(let text):
             newState.messageText = text
             // 공백 제거 후 비어있지 않으면 전송 버튼 활성화
             newState.isSendButtonEnabled = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
+        case .flushPendingMessages(let messages):
+            print("🔄 [Reduce] flushPendingMessages: \(messages.count) messages")
+            // 임시 큐의 메시지들을 한 번에 추가
+            newState.messages.append(contentsOf: messages)
         }
 
+        print("📊 [Reduce] Current state.messages.count: \(newState.messages.count)")
         return newState
     }
 
     // MARK: - Private Methods
 
-    /// 초기 메시지 로드 (REST API)
+    /// 초기 메시지 로드 (CoreData 우선 → REST API로 새 메시지만 가져옴)
+    /// - Note: CoreData에 데이터가 있으면 마지막 메시지 이후의 새 메시지만 API로 가져옴
+    ///         중복 방지 및 네트워크 효율성 향상
     private func loadInitialMessages() -> Observable<Mutation> {
+        print("📥 [ChatReactor] Loading initial messages for room: \(roomId)")
         return run(
             operation: { send in
                 send(.setLoading(true))
-                let messages = try await self.chatRepository.fetchChatHistory(roomId: self.roomId)
-                send(.setMessages(messages))
+
+                // 1. CoreData에서 최근 30개 메시지 조회 (pagination을 위해 전체가 아닌 일부만 로드)
+                let cachedMessages = ChatStorage.shared.fetchRecentMessages(roomId: self.roomId, limit: 30)
+
+                if !cachedMessages.isEmpty {
+                    // CoreData에 데이터가 있으면 먼저 표시
+                    print("✅ [ChatReactor] Loaded \(cachedMessages.count) messages from CoreData")
+                    send(.setMessages(cachedMessages))
+
+                    // 2. 마지막 메시지 날짜를 기준으로 새 메시지만 API에서 가져옴
+                    if let lastMessageDate = ChatStorage.shared.fetchLastMessageDate(roomId: self.roomId) {
+                        print("📥 [ChatReactor] Fetching new messages after: \(lastMessageDate)")
+                        let newMessages = try await self.chatRepository.fetchChatHistory(
+                            roomId: self.roomId,
+                            next: lastMessageDate
+                        )
+
+                        if !newMessages.isEmpty {
+                            print("✅ [ChatReactor] Loaded \(newMessages.count) new messages from API")
+                            // API로 받은 새 메시지를 CoreData에 저장
+                            Task {
+                                await ChatStorage.shared.saveMessages(newMessages)
+                            }
+                            send(.appendMessages(newMessages))
+                        } else {
+                            print("✅ [ChatReactor] No new messages from API")
+                        }
+                    }
+
+                    // 초기 로딩 완료 → 임시 큐 플러시
+                    self.isInitialLoadComplete = true
+                    if !self.pendingSocketMessages.isEmpty {
+                        print("🔄 [ChatReactor] Flushing \(self.pendingSocketMessages.count) pending socket messages")
+                        send(.flushPendingMessages(self.pendingSocketMessages))
+                        self.pendingSocketMessages.removeAll()
+                    }
+                } else {
+                    // CoreData에 데이터가 없으면 REST API로 전체 메시지 조회
+                    print("📥 [ChatReactor] No cached messages, fetching all from API...")
+                    let messages = try await self.chatRepository.fetchChatHistory(roomId: self.roomId)
+                    print("✅ [ChatReactor] Loaded \(messages.count) messages from API")
+
+                    // API로 받은 메시지를 CoreData에 저장
+                    await ChatStorage.shared.saveMessages(messages)
+
+                    send(.setMessages(messages))
+
+                    // 초기 로딩 완료 → 임시 큐 플러시
+                    self.isInitialLoadComplete = true
+                    if !self.pendingSocketMessages.isEmpty {
+                        print("🔄 [ChatReactor] Flushing \(self.pendingSocketMessages.count) pending socket messages")
+                        send(.flushPendingMessages(self.pendingSocketMessages))
+                        self.pendingSocketMessages.removeAll()
+                    }
+                }
             },
             onError: { error in
-                .setError(error.localizedDescription)
+                print("❌ [ChatReactor] Failed to load messages: \(error.localizedDescription)")
+                // 에러가 발생해도 초기 로딩은 완료로 처리
+                self.isInitialLoadComplete = true
+                return .setError(error.localizedDescription)
             }
         )
     }
 
-    /// Socket 연결 및 실시간 메시지 수신
+    /// Socket 연결 및 실시간 메시지 수신 (임시 큐 사용)
     private func connectToSocket() -> Observable<Mutation> {
+        print("🔌 [ChatReactor] Starting socket connection for room: \(roomId)")
         let stream = chatRepository.connectToChat(roomId: roomId)
 
         return Observable.create { observer in
             let task = Task {
+                print("🔌 [ChatReactor] Socket stream started")
                 for await result in stream {
                     switch result {
                     case .success(let message):
-                        observer.onNext(.appendMessage(message))
+                        print("✅ [ChatReactor] Received socket message: \(message.content)")
+
+                        // Socket으로 받은 메시지를 CoreData에 저장 (백그라운드)
+                        Task {
+                            await ChatStorage.shared.saveMessage(message)
+                        }
+
+                        if self.isInitialLoadComplete {
+                            // 초기 로딩 완료 → 즉시 UI에 반영
+                            print("📨 [ChatReactor] Appending message to UI (initial load complete)")
+                            observer.onNext(.appendMessage(message))
+                        } else {
+                            // 초기 로딩 중 → 임시 큐에 저장
+                            print("📦 [ChatReactor] Queuing message (initial load in progress)")
+                            self.pendingSocketMessages.append(message)
+                        }
 
                     case .failure(let error):
+                        print("❌ [ChatReactor] Socket error: \(error)")
                         observer.onNext(.setError(error.localizedDescription))
                     }
                 }
+                print("🔌 [ChatReactor] Socket stream ended")
             }
 
             return Disposables.create {
+                print("🔌 [ChatReactor] Disposing socket connection")
                 task.cancel()
                 self.chatRepository.disconnectChat()
             }
         }
     }
 
-    /// 메시지 전송
+    /// 메시지 전송 (REST API)
     private func sendMessageMutation(content: String) -> Observable<Mutation> {
-        // Socket으로 즉시 전송 (void 반환)
-        chatRepository.sendMessage(content: content)
-
-        // Socket에서 echo로 받은 메시지를 connectToSocket()에서 처리하므로
-        // 여기서는 별도 mutation 반환 안 함
-        return .empty()
-    }
-
-    /// 이전 메시지 더 로드 (페이지네이션)
-    private func loadPreviousMessages() -> Observable<Mutation> {
-        guard let oldestMessage = currentState.messages.first else {
-            return .empty()
-        }
+        print("📨 [ChatReactor] Sending message via REST API: \(content)")
 
         return run(
             operation: { send in
-                send(.setLoading(true))
-                let messages = try await self.chatRepository.fetchChatHistory(
+                // REST API로 메시지 전송
+                let sentMessage = try await self.chatRepository.sendMessageViaAPI(
                     roomId: self.roomId,
-                    next: oldestMessage.createdAt
+                    content: content
                 )
-                send(.appendMessages(messages))
+                print("✅ [ChatReactor] Message sent successfully: \(sentMessage.chatId)")
+
+                // 전송 성공 후 서버가 Socket으로 broadcast하므로
+                // connectToSocket()에서 자동으로 수신됨
+                // 따라서 여기서는 별도로 UI 업데이트 안 함
             },
             onError: { error in
-                .setError(error.localizedDescription)
+                print("❌ [ChatReactor] Failed to send message: \(error.localizedDescription)")
+                return .setError("메시지 전송 실패: \(error.localizedDescription)")
             }
         )
+    }
+
+    /// 이전 메시지 더 로드 (CoreData Pagination)
+    /// - Note: CoreData에서 이전 30개를 가져와 insertRows로 추가
+    ///         중복 pagination 방지를 위해 isLoadingMore 플래그 사용
+    private func loadPreviousMessages() -> Observable<Mutation> {
+        // 이미 로딩 중이거나 메시지가 없으면 무시
+        guard !currentState.isLoadingMore,
+              let oldestMessage = currentState.messages.first else {
+            print("[ChatReactor] Pagination ignored: isLoadingMore or no messages")
+            return .empty()
+        }
+
+        print("[ChatReactor] Loading previous messages before: \(oldestMessage.createdAt)")
+
+        return Observable.concat([
+            // 1. 로딩 시작
+            .just(.setLoadingMore(true)),
+
+            // 2. CoreData에서 이전 메시지 조회
+            Observable.create { observer in
+                let messages = ChatStorage.shared.fetchMessagesBefore(
+                    roomId: self.roomId,
+                    beforeDate: oldestMessage.createdAt,
+                    limit: 30
+                )
+
+                print("[ChatReactor] Loaded \(messages.count) previous messages from CoreData")
+
+                if messages.isEmpty {
+                    // 더 이상 데이터 없음
+                    observer.onNext(.setLoadingMore(false))
+                    print("[ChatReactor] No more previous messages")
+                } else {
+                    // prependMessages + setPrependedCount
+                    observer.onNext(.prependMessages(messages, count: messages.count))
+                    observer.onNext(.setPrependedCount(messages.count))
+                }
+
+                observer.onCompleted()
+                return Disposables.create()
+            }
+        ])
     }
 
     deinit {
