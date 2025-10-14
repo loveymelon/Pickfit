@@ -50,7 +50,8 @@ extension Router {
             return urlRequest
 
         case .multiPart:
-            // TODO: MultiPart encoding implementation
+            // multiPart는 NetworkManager의 uploadMultipart에서 처리
+            // 여기서는 기본 URLRequest만 반환
             return urlRequest
         }
     }

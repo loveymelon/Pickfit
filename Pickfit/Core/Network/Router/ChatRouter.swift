@@ -12,6 +12,7 @@ enum ChatRouter: Router {
     case fetchChatRoomList
     case fetchChatHistory(roomId: String, next: String?)
     case sendMessage(roomId: String, content: String, files: [String])
+    case uploadFiles(roomId: String, imageDataList: [Data])  // 파일 업로드 (multipart/form-data)
 }
 
 extension ChatRouter {
@@ -22,6 +23,8 @@ extension ChatRouter {
         case .fetchChatHistory:
             return .get
         case .sendMessage:
+            return .post
+        case .uploadFiles:
             return .post
         }
     }
@@ -34,14 +37,24 @@ extension ChatRouter {
             return "/chats/\(roomId)"
         case .sendMessage(let roomId, _, _):
             return "/chats/\(roomId)"
+        case .uploadFiles(let roomId, _):
+            return "/chats/\(roomId)/files"
         }
     }
 
     var optionalHeaders: HTTPHeaders? {
-        return HTTPHeaders([
-            HTTPHeader(name: "Content-Type", value: "application/json"),
-            HTTPHeader(name: "SeSACKey", value: APIKey.sesacKey)
-        ])
+        switch self {
+        case .uploadFiles:
+            // multipart/form-data는 Alamofire가 자동으로 Content-Type 설정
+            return HTTPHeaders([
+                HTTPHeader(name: "SeSACKey", value: APIKey.sesacKey)
+            ])
+        default:
+            return HTTPHeaders([
+                HTTPHeader(name: "Content-Type", value: "application/json"),
+                HTTPHeader(name: "SeSACKey", value: APIKey.sesacKey)
+            ])
+        }
     }
 
     var parameters: Parameters? {
@@ -57,6 +70,9 @@ extension ChatRouter {
 
         case .sendMessage:
             return nil
+
+        case .uploadFiles:
+            return nil  // multipart/form-data는 parameters 사용 안 함
         }
     }
 
@@ -74,6 +90,9 @@ extension ChatRouter {
                 "files": files
             ]
             return try? JSONSerialization.data(withJSONObject: bodyDict)
+
+        case .uploadFiles:
+            return nil  // multipart/form-data는 body 사용 안 함
         }
     }
 
@@ -85,6 +104,18 @@ extension ChatRouter {
             return .url
         case .sendMessage:
             return .json
+        case .uploadFiles(_, let imageDataList):
+            // MultipartFormData 구성
+            let formData = MultipartFormData()
+            for (index, imageData) in imageDataList.enumerated() {
+                formData.append(
+                    imageData,
+                    withName: "files",
+                    fileName: "image_\(Date().timeIntervalSince1970)_\(index).jpg",
+                    mimeType: "image/jpeg"
+                )
+            }
+            return .multiPart(formData)
         }
     }
 }

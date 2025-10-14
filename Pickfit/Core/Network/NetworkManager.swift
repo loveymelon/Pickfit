@@ -37,6 +37,32 @@ actor NetworkManager {
 
         return result
     }
+
+    /// Multipart/form-data 업로드 (파일 업로드용)
+    func uploadMultipart<T: DTO, R: Router>(dto: T.Type, router: R) async throws -> T {
+        let request = try router.asURLRequest()
+        let hasAuth = interceptor != nil
+
+        print("📡 [Network] Starting multipart upload")
+        print("   🌐 URL: \(request.url?.absoluteString ?? "nil")")
+        print("   📋 Method: \(request.httpMethod ?? "nil")")
+        print("   🔐 Has Interceptor: \(hasAuth)")
+
+        // EncodingType에서 MultipartFormData 추출
+        guard case .multiPart(let formData) = router.encodingType else {
+            print("❌ [Network] Router encodingType is not multiPart")
+            throw NetworkError.invalidURL
+        }
+
+        let response = await getMultipartResponse(dto: dto, request: request, formData: formData)
+
+        let result = try getResult(dto: dto, response: response)
+
+        print("✅ [Network] Multipart upload successful")
+        print("   🌐 URL: \(request.url?.path ?? "nil")")
+
+        return result
+    }
 }
 
 extension NetworkManager {
@@ -47,6 +73,19 @@ extension NetworkManager {
                 .response
         } else {
             return await AF.request(request)
+                .validate(statusCode: 200..<300)
+                .serializingDecodable(T.self)
+                .response
+        }
+    }
+
+    private func getMultipartResponse<T: DTO>(dto: T.Type, request: URLRequest, formData: MultipartFormData) async -> DataResponse<T, AFError> {
+        if let interceptor = interceptor {
+            return await AF.upload(multipartFormData: formData, with: request, interceptor: interceptor)
+                .serializingDecodable(T.self)
+                .response
+        } else {
+            return await AF.upload(multipartFormData: formData, with: request)
                 .validate(statusCode: 200..<300)
                 .serializingDecodable(T.self)
                 .response
