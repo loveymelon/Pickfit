@@ -9,6 +9,7 @@ import UIKit
 import ReactorKit
 import RxSwift
 import RxCocoa
+import PhotosUI
 
 final class ChatViewController: BaseViewController<ChatView>, View {
 
@@ -156,6 +157,13 @@ final class ChatViewController: BaseViewController<ChatView>, View {
             })
             .disposed(by: disposeBag)
 
+        // 첨부 버튼 (이미지 피커)
+        mainView.attachButton.rx.tap
+            .subscribe(onNext: { [weak self] in
+                self?.presentImagePicker()
+            })
+            .disposed(by: disposeBag)
+
         // 메시지 입력 텍스트 변경
         mainView.messageTextView.rx.text.orEmpty
             .distinctUntilChanged()
@@ -260,6 +268,46 @@ final class ChatViewController: BaseViewController<ChatView>, View {
                 // TODO: 에러 토스트 메시지 표시
             })
             .disposed(by: disposeBag)
+
+        // 선택된 이미지 상태 구독 (이미지 미리보기 업데이트)
+        reactor.state.map { $0.selectedImageDataList }
+            .distinctUntilChanged()
+            .observe(on: MainScheduler.instance)
+            .subscribe(onNext: { [weak self] imageDataList in
+                guard let self = self else { return }
+                print("🖼️ [ChatViewController] Selected images updated: \(imageDataList.count)")
+
+                // Data → UIImage 변환
+                let images = imageDataList.compactMap { data -> UIImage? in
+                    if let image = UIImage(data: data) {
+                        print("✅ [ChatViewController] Image converted: \(image.size)")
+                        return image
+                    } else {
+                        print("❌ [ChatViewController] Failed to convert data to UIImage")
+                        return nil
+                    }
+                }
+
+                print("🖼️ [ChatViewController] Converted images: \(images.count)")
+
+                self.mainView.imagePreviewView.updateImages(images) { index in
+                    // X 버튼 탭 시 해당 이미지 제거
+                    reactor.action.onNext(.removeImage(index))
+                }
+            })
+            .disposed(by: disposeBag)
+    }
+
+    // MARK: - Image Picker
+
+    private func presentImagePicker() {
+        var configuration = PHPickerConfiguration()
+        configuration.selectionLimit = 5  // 최대 5개
+        configuration.filter = .images    // 이미지만 선택
+
+        let picker = PHPickerViewController(configuration: configuration)
+        picker.delegate = self
+        present(picker, animated: true)
     }
 
     deinit {
@@ -292,6 +340,13 @@ extension ChatViewController: UITableViewDataSource {
 
         print("✅ [TableView] Configuring cell with: \(message.content), showTime: \(showTime), showProfile: \(showProfile)")
         cell.configure(with: message, showTime: showTime, showProfile: showProfile)
+
+        // 이미지 탭 시 전체화면 뷰어 표시
+        cell.onImageTapped = { [weak self] imageURL in
+            let imageViewerVC = ImageViewerViewController(imageURL: imageURL)
+            self?.present(imageViewerVC, animated: true)
+        }
+
         return cell
     }
 
@@ -443,6 +498,58 @@ extension ChatViewController: UITextViewDelegate {
             if bottom > 0 {
                 textView.setContentOffset(CGPoint(x: 0, y: bottom), animated: false)
             }
+        }
+    }
+}
+
+// MARK: - PHPickerViewControllerDelegate
+extension ChatViewController: PHPickerViewControllerDelegate {
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+
+        guard !results.isEmpty else {
+            print("🖼️ [PHPicker] No images selected")
+            return
+        }
+
+        print("🖼️ [PHPicker] Selected \(results.count) items")
+
+        // 비동기로 이미지 로드
+        var loadedImages: [UIImage] = []
+        let dispatchGroup = DispatchGroup()
+
+        for result in results {
+            dispatchGroup.enter()
+
+            result.itemProvider.loadObject(ofClass: UIImage.self) { [weak self] object, error in
+                defer { dispatchGroup.leave() }
+
+                if let error = error {
+                    print("❌ [PHPicker] Failed to load image: \(error)")
+                    return
+                }
+
+                if let image = object as? UIImage {
+                    loadedImages.append(image)
+                    print("✅ [PHPicker] Image loaded: \(image.size)")
+                }
+            }
+        }
+
+        // 모든 이미지 로드 완료 후 리사이징 → Reactor에 전달
+        dispatchGroup.notify(queue: .main) { [weak self] in
+            guard let self = self, let reactor = self.reactor else { return }
+            print("✅ [PHPicker] All images loaded: \(loadedImages.count)")
+
+            // UIImage → 리사이징 → Data 변환
+            let imageDataList = ImageResizer.resizeMultiple(
+                images: loadedImages,
+                maxDimension: 1280,
+                compressionQuality: 0.7
+            )
+
+            print("✅ [PHPicker] Images resized: \(imageDataList.count)")
+            reactor.action.onNext(.selectImages(imageDataList))
         }
     }
 }

@@ -59,6 +59,8 @@ final class ChatView: BaseView {
         $0.isUserInteractionEnabled = true
     }
 
+    let imagePreviewView = ImagePreviewView()
+
     let attachButton = UIButton().then {
         $0.setImage(UIImage(systemName: "paperclip"), for: .normal)
         $0.tintColor = .systemGray
@@ -100,6 +102,7 @@ final class ChatView: BaseView {
     override func configureHierarchy() {
         addSubview(tableView)
         addSubview(inputContainerView)
+        inputContainerView.addSubview(imagePreviewView)
         inputContainerView.addSubview(attachButton)
         inputContainerView.addSubview(messageTextView)
         inputContainerView.addSubview(sendButton)
@@ -159,16 +162,23 @@ final class ChatView: BaseView {
             $0.bottom.equalTo(inputContainerView.snp.top)  // inputContainer 위까지
         }
 
+        imagePreviewView.snp.makeConstraints {
+            $0.top.equalToSuperview().offset(8)
+            $0.leading.equalToSuperview().offset(12)
+            $0.trailing.equalToSuperview().offset(-12)
+            $0.height.equalTo(0)  // 초기에는 숨김 (이미지 선택 시 96으로 변경)
+        }
+
         attachButton.snp.makeConstraints {
             $0.leading.equalToSuperview().offset(12)
-            $0.top.equalToSuperview().offset(8)
+            $0.top.equalTo(imagePreviewView.snp.bottom).offset(8)
             $0.bottom.equalToSuperview().offset(-24)
             $0.width.height.equalTo(36)
         }
 
         sendButton.snp.makeConstraints {
             $0.trailing.equalToSuperview().offset(-12)
-            $0.top.equalToSuperview().offset(8)
+            $0.top.equalTo(imagePreviewView.snp.bottom).offset(8)
             $0.bottom.equalToSuperview().offset(-24)
             $0.width.height.equalTo(36)
         }
