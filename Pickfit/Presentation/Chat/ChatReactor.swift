@@ -4,7 +4,7 @@
 //
 //  Created by 김진수 on 10/10/25.
 //
-
+import Foundation
 import ReactorKit
 import RxSwift
 
@@ -28,6 +28,10 @@ final class ChatReactor: Reactor {
         case loadMoreMessages
         case updateMessageText(String)
         case resetPrependedCount  // prependedCount 초기화용
+        // 이미지 선택 관련
+        case selectImages([Data])     // 이미지 피커에서 선택 (Data로 변경)
+        case removeImage(Int)         // 특정 이미지 제거
+        case clearImages              // 전송 후 이미지 초기화
     }
 
     enum Mutation {
@@ -41,6 +45,9 @@ final class ChatReactor: Reactor {
         case flushPendingMessages([ChatMessageEntity]) // 임시 큐 플러시
         case setPrependedCount(Int)  // insertRows 트리거용
         case setLoadingMore(Bool)  // pagination 중복 방지
+        // 이미지 선택 관련
+        case setSelectedImages([Data])     // 선택된 이미지 설정 (Data로 변경)
+        case setIsUploadingImages(Bool)    // 이미지 업로드 중 상태
     }
 
     struct State {
@@ -51,6 +58,9 @@ final class ChatReactor: Reactor {
         var errorMessage: String?
         var messageText: String = ""
         var isSendButtonEnabled: Bool = false
+        // 이미지 선택 관련
+        var selectedImageDataList: [Data] = []  // 선택된 이미지 Data (최대 5개)
+        var isUploadingImages: Bool = false     // 이미지 업로드 중
     }
 
     let initialState = State()
@@ -75,6 +85,22 @@ final class ChatReactor: Reactor {
 
         case .resetPrependedCount:
             return .just(.setPrependedCount(0))
+
+        // 이미지 선택 관련
+        case .selectImages(let imageDataList):
+            let limitedImages = Array(imageDataList.prefix(5))  // 최대 5개 제한
+            return .just(.setSelectedImages(limitedImages))
+
+        case .removeImage(let index):
+            var newImages = currentState.selectedImageDataList
+            guard index >= 0 && index < newImages.count else {
+                return .empty()
+            }
+            newImages.remove(at: index)
+            return .just(.setSelectedImages(newImages))
+
+        case .clearImages:
+            return .just(.setSelectedImages([]))
         }
     }
 
@@ -130,6 +156,15 @@ final class ChatReactor: Reactor {
             print("🔄 [Reduce] flushPendingMessages: \(messages.count) messages")
             // 임시 큐의 메시지들을 한 번에 추가
             newState.messages.append(contentsOf: messages)
+
+        // 이미지 선택 관련
+        case .setSelectedImages(let imageDataList):
+            print("🔄 [Reduce] setSelectedImages: \(imageDataList.count) images")
+            newState.selectedImageDataList = imageDataList
+
+        case .setIsUploadingImages(let isUploading):
+            print("🔄 [Reduce] setIsUploadingImages: \(isUploading)")
+            newState.isUploadingImages = isUploading
         }
 
         print("📊 [Reduce] Current state.messages.count: \(newState.messages.count)")
@@ -255,18 +290,48 @@ final class ChatReactor: Reactor {
         }
     }
 
-    /// 메시지 전송 (REST API)
+    /// 메시지 전송 (REST API + 이미지 업로드)
     private func sendMessageMutation(content: String) -> Observable<Mutation> {
         print("📨 [ChatReactor] Sending message via REST API: \(content)")
 
+        let selectedImageDataList = currentState.selectedImageDataList
+        let hasImages = !selectedImageDataList.isEmpty
+
+        if hasImages {
+            print("🖼️ [ChatReactor] \(selectedImageDataList.count) images selected, will upload first")
+        }
+
         return run(
             operation: { send in
-                // REST API로 메시지 전송
+                var filePaths: [String] = []
+
+                // 1. 이미지가 있으면 먼저 업로드
+                if hasImages {
+                    send(.setIsUploadingImages(true))
+                    print("📤 [ChatReactor] Starting image upload...")
+
+                    // 1-1. 파일 업로드 API 호출 (이미 Data이므로 리사이징 불필요)
+                    filePaths = try await self.chatRepository.uploadFiles(
+                        roomId: self.roomId,
+                        imageDataList: selectedImageDataList
+                    )
+
+                    print("✅ [ChatReactor] Files uploaded: \(filePaths)")
+                    send(.setIsUploadingImages(false))
+                }
+
+                // 2. 메시지 전송 (파일 경로 포함)
                 let sentMessage = try await self.chatRepository.sendMessageViaAPI(
                     roomId: self.roomId,
-                    content: content
+                    content: content,
+                    files: filePaths
                 )
                 print("✅ [ChatReactor] Message sent successfully: \(sentMessage.chatId)")
+
+                // 3. 전송 후 이미지 초기화
+                if hasImages {
+                    send(.setSelectedImages([]))
+                }
 
                 // 전송 성공 후 서버가 Socket으로 broadcast하므로
                 // connectToSocket()에서 자동으로 수신됨
