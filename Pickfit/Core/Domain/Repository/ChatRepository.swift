@@ -44,6 +44,21 @@ final class ChatRepository {
         return apiMessages
     }
 
+    /// 파일 업로드 (multipart/form-data)
+    /// - Parameters:
+    ///   - roomId: 채팅방 ID
+    ///   - imageDataList: 압축된 이미지 Data 배열 (최대 5개)
+    /// - Returns: 업로드된 파일 경로 배열
+    func uploadFiles(roomId: String, imageDataList: [Data]) async throws -> [String] {
+        let dto = try await NetworkManager.shared.uploadMultipart(
+            dto: FileUploadResponseDTO.self,
+            router: ChatRouter.uploadFiles(roomId: roomId, imageDataList: imageDataList)
+        )
+
+        print("✅ [ChatRepository] File upload success: \(dto.files.count) files")
+        return dto.files
+    }
+
     /// REST API로 메시지 전송 (파일 첨부 시 사용)
     func sendMessageViaAPI(roomId: String, content: String, files: [String] = []) async throws -> ChatMessageEntity {
         let dto = try await NetworkManager.shared.fetch(
