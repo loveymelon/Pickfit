@@ -111,6 +111,7 @@ xcuserdata
 
 Pickfit/Core/Config/APIKey.swift
 Pickfit/App/Info.plist
+Pickfit/App/GoogleService-Info.plist
 .DS_Store
 CLAUDE.md
 .claude/
