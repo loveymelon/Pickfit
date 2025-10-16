@@ -14,6 +14,41 @@ final class MainTabBarController: UITabBarController {
 
         configureTabBar()
         setupViewControllers()
+        setupNotifications()
+    }
+
+    /// 배지 업데이트 알림 구독
+    private func setupNotifications() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleUpdateChatBadge),
+            name: .updateChatBadge,
+            object: nil
+        )
+
+        print("📊 [MainTabBarController] Badge notification observer added")
+    }
+
+    /// 채팅 탭 배지 업데이트
+    @objc private func handleUpdateChatBadge() {
+        let totalCount = BadgeManager.shared.getTotalUnreadCount()
+
+        // 채팅 탭은 index 2 (홈:0, 주문:1, 채팅:2, 마이:3)
+        let chatTabIndex = 2
+
+        DispatchQueue.main.async {
+            if totalCount > 0 {
+                self.tabBar.items?[chatTabIndex].badgeValue = "\(totalCount)"
+                print("📊 [MainTabBarController] Chat tab badge updated: \(totalCount)")
+            } else {
+                self.tabBar.items?[chatTabIndex].badgeValue = nil
+                print("📊 [MainTabBarController] Chat tab badge cleared")
+            }
+        }
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     private func configureTabBar() {
@@ -35,8 +70,8 @@ final class MainTabBarController: UITabBarController {
         let orderHistoryNav = UINavigationController(rootViewController: orderHistoryVC)
         orderHistoryNav.tabBarItem = UITabBarItem(
             title: "주문",
-            image: UIImage(named: "orderEmpty"),
-            selectedImage: UIImage(named: "orderFill")
+            image: UIImage(named: "OrderEmpty"),
+            selectedImage: UIImage(named: "OrderFill")
         )
 
         let chatListVC = ChatListViewController()
