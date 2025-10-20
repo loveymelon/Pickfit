@@ -8,6 +8,7 @@
 import Foundation
 import ReactorKit
 import RxSwift
+import FirebaseMessaging
 
 final class MyPageReactor: Reactor {
 
@@ -89,11 +90,24 @@ final class MyPageReactor: Reactor {
             operation: { send in
                 send(.setLoading(true))
 
-                // 1. 토큰 삭제
+                // 1. Firebase FCM 토큰 삭제
+                // - 다음 사용자와 토큰 분리
+                // - 재로그인 시 새 토큰 발급
+                await self.deleteFirebaseToken()
+
+                // 2. UserDefaults에서 deviceToken 삭제
+                UserDefaults.standard.removeObject(forKey: "deviceToken")
+                print("✅ [MyPage] Device token removed from UserDefaults")
+
+                // 3. Keychain 인증 토큰 삭제
                 await KeychainAuthStorage.shared.clear()
 
-                // 2. 장바구니 비우기
+                // 4. 장바구니 비우기
                 CartManager.shared.clearCart()
+
+                // 5. 채팅 상태 초기화
+                ChatStateManager.shared.clearActiveRoom()
+                BadgeManager.shared.clearAllUnreadCounts()
 
                 print("✅ [MyPage] 로그아웃 성공")
                 send(.setLogoutSuccess)
@@ -102,5 +116,20 @@ final class MyPageReactor: Reactor {
                 .setError(error.localizedDescription)
             }
         )
+    }
+
+    /// Firebase FCM 토큰 삭제
+    /// - Note: 로그아웃 시 호출하여 다음 사용자와 토큰 분리
+    private func deleteFirebaseToken() async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            Messaging.messaging().deleteToken { error in
+                if let error = error {
+                    print("⚠️ [MyPage] FCM token deletion failed: \(error.localizedDescription)")
+                } else {
+                    print("✅ [MyPage] FCM token deleted from Firebase")
+                }
+                continuation.resume()
+            }
+        }
     }
 }
