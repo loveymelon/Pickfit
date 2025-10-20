@@ -38,6 +38,46 @@ actor NetworkManager {
         return result
     }
 
+    /// 빈 응답을 허용하는 요청 (200 OK만 확인, 응답 파싱 안 함)
+    /// - Note: 서버가 응답 본문 없이 200 OK만 보내는 경우 사용
+    func fetchWithoutResponse<R: Router>(router: R) async throws {
+        let request = try router.asURLRequest()
+        let hasAuth = interceptor != nil
+
+        print("📡 [Network] Starting request (no response expected)")
+        print("   🌐 URL: \(request.url?.absoluteString ?? "nil")")
+        print("   📋 Method: \(request.httpMethod ?? "nil")")
+        print("   🔐 Has Interceptor: \(hasAuth)")
+
+        let emptyCodes: Set<Int> = [200, 201, 204, 205]
+        let serializer = DataResponseSerializer(emptyResponseCodes: emptyCodes)
+
+        let req = AF.request(request, interceptor: interceptor)
+            .validate(statusCode: 200..<300)   // 두 분기 모두 검증 통일
+
+        let response = await req
+            .serializingResponse(using: serializer)
+            .response
+
+        switch response.result {
+        case .success:
+            print("✅ [Network] Request successful (no response body)")
+            print("   🌐 URL: \(request.url?.path ?? "nil")")
+        case let .failure(error):
+            print("❌ [Network Error] Request failed")
+            print("   🌐 URL: \(response.request?.url?.absoluteString ?? "nil")")
+            print("   📊 AFError: \(error)")
+
+            if let statusCode = response.response?.statusCode {
+                print("   📊 Status Code: \(statusCode)")
+                if [401, 403, 418].contains(statusCode) {
+                    throw NetworkError.unauthorized
+                }
+            }
+            throw NetworkError.serverError(error)
+        }
+    }
+
     /// Multipart/form-data 업로드 (파일 업로드용)
     func uploadMultipart<T: DTO, R: Router>(dto: T.Type, router: R) async throws -> T {
         let request = try router.asURLRequest()
