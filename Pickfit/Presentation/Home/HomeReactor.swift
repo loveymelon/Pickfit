@@ -19,6 +19,7 @@ final class HomeReactor: Reactor {
     enum Action {
         case viewDidLoad
         case viewIsAppearing
+        case selectBrand(index: Int, storeId: String)
     }
 
     enum Mutation {
@@ -28,6 +29,7 @@ final class HomeReactor: Reactor {
         case setBanners(BannerResponseDTO)
         case setError(Error)
         case setMenuList([StoreDetailEntity.Menu])
+        case setSelectedBrandIndex(Int)
         case logout
     }
 
@@ -41,6 +43,7 @@ final class HomeReactor: Reactor {
         var errorMessage: String? = nil
         var shouldNavigateToLogin: Bool = false
         var menuList: [StoreDetailEntity.Menu] = []
+        var selectedBrandIndex: Int = 0
     }
 
     let initialState = State()
@@ -54,7 +57,7 @@ final class HomeReactor: Reactor {
             return run(
                 operation: { [weak self] send in
                     guard let self else { return }
-                    
+
                     print("📡 [API] HomeReactor - Starting API calls")
                     send(.setLoading(true))
 
@@ -71,16 +74,36 @@ final class HomeReactor: Reactor {
                     print("✅ [API] Stores received: \(stores.stores.count) items")
                     print("✅ [API] Banners received: \(banners.data.count) items")
                     send(.setStores(stores: stores.stores, nextCursor: stores.nextCursor))
-                    
-                    let storeDetail = try await self.storeRepository.fetchStoreDetail(storeId: stores.stores[0].storeId)
-                    
-                    send(.setMenuList(storeDetail.menuList))
-                    //                    await self.storeRepository.fetchStoreDetail(storeId: <#T##String#>)
-                    
+
+                    // 첫 번째 브랜드의 메뉴 로드
+                    if !stores.stores.isEmpty {
+                        let storeDetail = try await self.storeRepository.fetchStoreDetail(storeId: stores.stores[0].storeId)
+                        send(.setMenuList(storeDetail.menuList))
+                        send(.setSelectedBrandIndex(0))
+                    }
+
                     send(.setBanners(banners))
                 },
                 onError: { error in
                     print("❌ [API] HomeReactor error: \(error.localizedDescription)")
+                    return .setError(error)
+                }
+            )
+
+        case .selectBrand(let index, let storeId):
+            return run(
+                operation: { [weak self] send in
+                    guard let self else { return }
+
+                    print("📡 [API] Fetching menu for store: \(storeId)")
+                    send(.setSelectedBrandIndex(index))
+
+                    let storeDetail = try await self.storeRepository.fetchStoreDetail(storeId: storeId)
+                    send(.setMenuList(storeDetail.menuList))
+                    print("✅ [API] Menu received: \(storeDetail.menuList.count) items")
+                },
+                onError: { error in
+                    print("❌ [API] Menu fetch error: \(error.localizedDescription)")
                     return .setError(error)
                 }
             )
@@ -114,9 +137,12 @@ final class HomeReactor: Reactor {
         case .setError(let error):
             newState.isLoading = false
             newState.errorMessage = error.localizedDescription
-            
+
         case .setMenuList(let menu):
             newState.menuList = menu
+
+        case .setSelectedBrandIndex(let index):
+            newState.selectedBrandIndex = index
 
         case .logout:
             newState.shouldNavigateToLogin = true

@@ -51,7 +51,7 @@ final class HomeViewController: BaseViewController<HomeView> {
             .disposed(by: disposeBag)
 
         let dataSource = RxCollectionViewSectionedReloadDataSource<HomeSectionModel>(
-            configureCell: { dataSource, collectionView, indexPath, item in
+            configureCell: { [weak self] dataSource, collectionView, indexPath, item in
                 switch item {
                 case .store(let store):
                     guard let cell = collectionView.dequeueReusableCell(
@@ -76,17 +76,20 @@ final class HomeViewController: BaseViewController<HomeView> {
                     ) as? HomeBannerCell else { return UICollectionViewCell() }
                     cell.configure(with: banner)
                     return cell
-                    
+
                 case .stores(let store):
                     guard let cell = collectionView.dequeueReusableCell(
                         withReuseIdentifier: CategoryCapsuleCell.identifier,
                         for: indexPath
                     ) as? CategoryCapsuleCell else { return UICollectionViewCell() }
 
-                    cell.configure(image: store.storeImageUrls.last, text: store.name)
+                    // 선택 상태 확인
+                    let selectedIndex = self?.reactor.currentState.selectedBrandIndex ?? 0
+                    let isSelected = (indexPath.item == selectedIndex)
+                    cell.configure(image: store.storeImageUrls.last, text: store.name, isSelected: isSelected)
 
                     return cell
-                    
+
                 case .product(let product):
                     guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: StoreProductCell.identifier, for: indexPath) as? StoreProductCell else { return UICollectionViewCell() }
                     cell.configure(with: product)
@@ -99,30 +102,33 @@ final class HomeViewController: BaseViewController<HomeView> {
             reactor.state.map { $0.stores }.distinctUntilChanged(),
             reactor.state.map { $0.categories }.distinctUntilChanged(),
             reactor.state.map { $0.banners }.distinctUntilChanged(),
-            reactor.state.map { $0.menuList }
+            reactor.state.map { $0.menuList },
+            reactor.state.map { $0.selectedBrandIndex }
         )
-        .map { stores, categories, banners, menuList -> [HomeSectionModel] in
+        .map { stores, categories, banners, menuList, _ -> [HomeSectionModel] in
             let products: [ProductModel]
-            
-            if !menuList.isEmpty {
-                // menuList가 있으면 실제 메뉴 데이터 사용
-                products = menuList.compactMap { menu in
-                    // tag가 2개 이상이면 필터링
-                    guard menu.tags.count < 2 else { return nil }
 
-                    return ProductModel(
-                        menuId: menu.menuId,
-                        imageUrl: menu.menuImageUrl,
-                        title: menu.name,
-                        priceText: "\(menu.price)원",
-                        discountPercent: nil,
-                        isLiked: false,
-                        tags: menu.tags
-                    )
-                }
+            if !menuList.isEmpty {
+                // menuList가 있으면 실제 메뉴 데이터 사용 (최대 6개)
+                products = menuList
+                    .prefix(6)
+                    .compactMap { menu in
+                        // tag가 2개 이상이면 필터링
+                        guard menu.tags.count < 2 else { return nil }
+
+                        return ProductModel(
+                            menuId: menu.menuId,
+                            imageUrl: menu.menuImageUrl,
+                            title: menu.name,
+                            priceText: "\(menu.price)원",
+                            discountPercent: nil,
+                            isLiked: false,
+                            tags: menu.tags
+                        )
+                    }
             } else {
-                // menuList가 없으면 더미 데이터 사용
-                products = (0..<10).compactMap { index in
+                // menuList가 없으면 더미 데이터 사용 (최대 6개)
+                products = (0..<6).compactMap { index in
                     let tagCount = Int.random(in: 0...3)
                     guard tagCount < 2 else { return nil }
 
@@ -137,7 +143,7 @@ final class HomeViewController: BaseViewController<HomeView> {
                     )
                 }
             }
-            
+
             return [
                 .main(stores),
                 .category(categories),
@@ -149,11 +155,30 @@ final class HomeViewController: BaseViewController<HomeView> {
         .bind(to: mainView.collectionView.rx.items(dataSource: dataSource))
         .disposed(by: disposeBag)
 
-        // 카테고리 셀 탭 이벤트
-        mainView.collectionView.rx.modelSelected(HomeSectionItem.self)
-            .subscribe(onNext: { [weak self] item in
-                if case .category(let category) = item {
-                    self?.navigateToStoreList(category: category)
+        // 셀 탭 이벤트
+        mainView.collectionView.rx.itemSelected
+            .withLatestFrom(
+                Observable.combineLatest(
+                    mainView.collectionView.rx.itemSelected,
+                    mainView.collectionView.rx.modelSelected(HomeSectionItem.self)
+                )
+            )
+            .subscribe(onNext: { [weak self] indexPath, item in
+                guard let self = self else { return }
+
+                switch item {
+                case .category(let category):
+                    self.navigateToStoreList(category: category)
+
+                case .stores(let store):
+                    // 브랜드 선택 이벤트
+                    let stores = self.reactor.currentState.stores
+                    if let storeIndex = stores.firstIndex(where: { $0.storeId == store.storeId }) {
+                        self.reactor.action.onNext(.selectBrand(index: storeIndex, storeId: store.storeId))
+                    }
+
+                default:
+                    break
                 }
             })
             .disposed(by: disposeBag)

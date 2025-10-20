@@ -22,17 +22,34 @@ final class CategoryCapsuleCell: UICollectionViewCell {
         $0.layer.borderColor = UIColor.systemGray4.cgColor
         $0.backgroundColor = .white
     }
-    
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         configureUI()
     }
-    
+
     required init?(coder: NSCoder) { fatalError() }
-    
-    func configure(image: String?, text: String) {
+
+    func configure(image: String?, text: String, isSelected: Bool = false) {
         iconImageView.loadImage(from: image)
         titleLabel.text = text
+        updateSelectionState(isSelected: isSelected)
+    }
+
+    private func updateSelectionState(isSelected: Bool) {
+        if isSelected {
+            containerView.layer.borderWidth = 2
+            containerView.layer.borderColor = UIColor.black.cgColor
+            containerView.backgroundColor = UIColor.black.withAlphaComponent(0.05)
+            titleLabel.textColor = .black
+            titleLabel.font = .systemFont(ofSize: 14, weight: .semibold)
+        } else {
+            containerView.layer.borderWidth = 1
+            containerView.layer.borderColor = UIColor.systemGray4.cgColor
+            containerView.backgroundColor = .white
+            titleLabel.textColor = .darkGray
+            titleLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        }
     }
 }
 
