@@ -39,11 +39,14 @@ final class ChatMessageCell: UITableViewCell {
     }
 
     private var isMyMessage = false
-    private var imageViews: [UIImageView] = []
+    private var imageViews: [UIView] = []
     private var imageURLs: [String] = []
 
     // 이미지 탭 시 호출될 클로저
     var onImageTapped: ((URL) -> Void)?
+
+    // PDF 탭 시 호출될 클로저
+    var onPDFTapped: ((String) -> Void)?
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -105,6 +108,9 @@ final class ChatMessageCell: UITableViewCell {
     // MARK: - Image Setup
 
     private func setupImages(files: [String]) {
+        print("🔧 [ChatMessageCell] setupImages called with \(files.count) files:")
+        files.forEach { print("  - \($0)") }
+
         // 기존 이미지 뷰 제거
         imageViews.forEach { $0.removeFromSuperview() }
         imageViews.removeAll()
@@ -117,21 +123,118 @@ final class ChatMessageCell: UITableViewCell {
 
         imageContainerView.isHidden = false
 
-        // 이미지 개수별 레이아웃
-        switch files.count {
-        case 1:
-            setupSingleImage(files: files)
-        case 2:
-            setupTwoImages(files: files)
-        case 3:
-            setupThreeImages(files: files)
-        case 4:
-            setupFourImages(files: files)
-        case 5:
-            setupFiveImages(files: files)
-        default:
-            break
+        // 파일과 이미지 분리
+        let (imageFiles, pdfFiles) = separateFilesByType(files)
+
+        print("✅ [ChatMessageCell] Separated: \(imageFiles.count) images, \(pdfFiles.count) PDFs")
+
+        // PDF 파일이 있으면 먼저 표시
+        for pdfUrl in pdfFiles {
+            print("📄 [ChatMessageCell] Setting up PDF: \(pdfUrl)")
+            setupPDFFile(url: pdfUrl)
         }
+
+        // 이미지 파일 표시
+        if !imageFiles.isEmpty {
+            print("🖼️ [ChatMessageCell] Setting up \(imageFiles.count) images")
+            // 이미지 개수별 레이아웃
+            switch imageFiles.count {
+            case 1:
+                setupSingleImage(files: imageFiles)
+            case 2:
+                setupTwoImages(files: imageFiles)
+            case 3:
+                setupThreeImages(files: imageFiles)
+            case 4:
+                setupFourImages(files: imageFiles)
+            case 5:
+                setupFiveImages(files: imageFiles)
+            default:
+                break
+            }
+        }
+    }
+
+    private func separateFilesByType(_ files: [String]) -> (images: [String], pdfs: [String]) {
+        var images: [String] = []
+        var pdfs: [String] = []
+
+        for file in files {
+            let lowercased = file.lowercased()
+            if lowercased.hasSuffix(".pdf") {
+                pdfs.append(file)
+                print("📄 [ChatMessageCell] Detected PDF: \(file)")
+            } else {
+                images.append(file)
+                print("🖼️ [ChatMessageCell] Detected Image: \(file)")
+            }
+        }
+
+        print("📊 [ChatMessageCell] Separation result: \(pdfs.count) PDFs, \(images.count) images")
+        return (images, pdfs)
+    }
+
+    private func setupPDFFile(url: String) {
+        let pdfView = createPDFView(url: url)
+        imageContainerView.addSubview(pdfView)
+
+        // 단일 PDF는 100x100 정사각형으로 표시 (이미지와 동일)
+        pdfView.snp.makeConstraints {
+            $0.edges.equalToSuperview()
+            $0.width.height.equalTo(100)
+        }
+
+        imageViews.append(pdfView)
+    }
+
+    private func createPDFView(url: String) -> UIView {
+        // 간단한 정사각형 컨테이너 (이미지와 동일한 크기)
+        let container = UIView()
+        container.backgroundColor = UIColor.systemGray6
+        container.layer.cornerRadius = 8
+        container.layer.borderWidth = 1
+        container.layer.borderColor = UIColor.systemGray4.cgColor
+        container.tag = url.hashValue // URL을 tag로 저장
+
+        // PDF 아이콘만 크게 표시
+        let iconImageView = UIImageView()
+        iconImageView.image = UIImage(systemName: "doc.fill")
+        iconImageView.tintColor = .systemRed
+        iconImageView.contentMode = .scaleAspectFit
+
+        container.addSubview(iconImageView)
+
+        iconImageView.snp.makeConstraints {
+            $0.center.equalToSuperview()
+            $0.width.height.equalTo(50)  // 큰 아이콘
+        }
+
+        // PDF 파일 탭 제스처 추가
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(pdfTapped(_:)))
+        container.addGestureRecognizer(tapGesture)
+        container.isUserInteractionEnabled = true
+
+        return container
+    }
+
+    @objc private func pdfTapped(_ gesture: UITapGestureRecognizer) {
+        guard let container = gesture.view else {
+            print("⚠️ [ChatMessageCell] PDF tap gesture view is nil")
+            return
+        }
+
+        print("🔍 [ChatMessageCell] PDF container tapped, tag: \(container.tag)")
+        print("🔍 [ChatMessageCell] Available imageURLs: \(imageURLs)")
+
+        guard let url = imageURLs.first(where: { $0.hashValue == container.tag }) else {
+            print("⚠️ [ChatMessageCell] PDF URL not found for tag: \(container.tag)")
+            print("⚠️ [ChatMessageCell] Available hashes: \(imageURLs.map { $0.hashValue })")
+            return
+        }
+
+        print("✅ [ChatMessageCell] PDF tapped: \(url)")
+        print("🔗 [ChatMessageCell] Calling onPDFTapped callback")
+        onPDFTapped?(url)
     }
 
     // 1개: 100x100
@@ -324,12 +427,20 @@ final class ChatMessageCell: UITableViewCell {
 
     @objc private func imageTapped(_ gesture: UITapGestureRecognizer) {
         guard let tappedImageView = gesture.view as? UIImageView,
-              let index = imageViews.firstIndex(of: tappedImageView),
+              let index = imageViews.firstIndex(where: { ($0 as? UIImageView) == tappedImageView }),
               index < imageURLs.count else {
+            print("⚠️ [ChatMessageCell] Image tap: Invalid index or not an image view")
             return
         }
 
         let imageURLString = imageURLs[index]
+
+        // PDF인지 확인
+        if imageURLString.lowercased().hasSuffix(".pdf") {
+            print("⚠️ [ChatMessageCell] This is a PDF, not an image: \(imageURLString)")
+            return
+        }
+
         let fullURL = URL(string: APIKey.baseURL + imageURLString)
 
         if let url = fullURL {
@@ -341,10 +452,12 @@ final class ChatMessageCell: UITableViewCell {
     private func loadImage(into imageView: UIImageView, url: String) {
         // Kingfisher로 이미지 로드
         let fullURLString = APIKey.baseURL + url
-        let fullURL = URL(string: fullURLString)
+        guard let fullURL = URL(string: fullURLString) else {
+            print("❌ [ChatMessageCell] Invalid URL: \(fullURLString)")
+            return
+        }
 
         print("🖼️ [ChatMessageCell] Loading image from: \(fullURLString)")
-        print("🖼️ [ChatMessageCell] URL valid: \(fullURL != nil)")
 
         // Authorization 헤더 추가 (KeychainAuthStorage에서 토큰 가져오기)
         var headers: [String: String] = [
@@ -364,23 +477,76 @@ final class ChatMessageCell: UITableViewCell {
             return modifiedRequest
         }
 
+        // onFailure에서 PDF 여부를 확인하고 재구성
         imageView.kf.setImage(
             with: fullURL,
             placeholder: UIImage(systemName: "photo"),
             options: [
                 .requestModifier(modifier),
                 .transition(.fade(0.2)),
-                .cacheOriginalImage
+                .cacheOriginalImage,
+                .onFailureImage(UIImage(systemName: "doc.fill"))
             ]
-        ) { result in
+        ) { [weak self] result in
             switch result {
             case .success(let value):
                 print("✅ [ChatMessageCell] Image loaded successfully: \(value.source.url?.absoluteString ?? "unknown")")
             case .failure(let error):
                 print("❌ [ChatMessageCell] Image load failed: \(error.localizedDescription)")
-                print("❌ [ChatMessageCell] URL was: \(fullURLString)")
+                print("⚠️ [ChatMessageCell] Checking if file is actually a PDF...")
+
+                // 파일이 PDF일 가능성 확인 (서버가 .jpg로 저장해도 실제는 PDF)
+                self?.checkIfPDFAndReload(url: url, fullURL: fullURL, headers: headers)
             }
         }
+    }
+
+    private func checkIfPDFAndReload(url: String, fullURL: URL, headers: [String: String]) {
+        // Data를 다운로드해서 매직 넘버 확인
+        var request = URLRequest(url: fullURL)
+        headers.forEach { key, value in
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self, let data = data, data.count > 4 else { return }
+
+            // PDF 매직 넘버 확인 (%PDF)
+            let header = data.prefix(4)
+            if let headerString = String(data: header, encoding: .ascii), headerString == "%PDF" {
+                print("✅ [ChatMessageCell] File is actually a PDF! Converting to PDF view...")
+
+                DispatchQueue.main.async {
+                    // 이미지 뷰들을 제거하고 PDF 카드로 교체
+                    self.convertImageToPDFView(originalURL: url)
+                }
+            } else {
+                print("⚠️ [ChatMessageCell] File is not a PDF, genuine image load failure")
+            }
+        }.resume()
+    }
+
+    private func convertImageToPDFView(originalURL: String) {
+        // 기존 이미지 뷰 제거
+        imageViews.forEach { $0.removeFromSuperview() }
+        imageViews.removeAll()
+
+        // PDF 카드 생성 (이미지와 동일한 100x100 크기)
+        let pdfView = createPDFView(url: originalURL)
+        imageContainerView.addSubview(pdfView)
+
+        pdfView.snp.makeConstraints {
+            $0.edges.equalToSuperview()
+            $0.width.height.equalTo(100)  // 단일 이미지와 동일한 크기
+        }
+
+        imageViews.append(pdfView)
+
+        // 레이아웃 업데이트
+        setNeedsLayout()
+        layoutIfNeeded()
+
+        print("✅ [ChatMessageCell] Converted to PDF view successfully")
     }
 
     private func updateLayout() {
