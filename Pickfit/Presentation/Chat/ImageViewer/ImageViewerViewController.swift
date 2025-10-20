@@ -10,10 +10,19 @@ import Kingfisher
 
 final class ImageViewerViewController: BaseViewController<ImageViewerView> {
 
-    private let imageURL: URL
+    private let imageURL: URL?
+    private let image: UIImage?
 
     init(imageURL: URL) {
         self.imageURL = imageURL
+        self.image = nil
+        super.init(nibName: nil, bundle: nil)
+        modalPresentationStyle = .fullScreen
+    }
+
+    init(image: UIImage) {
+        self.imageURL = nil
+        self.image = image
         super.init(nibName: nil, bundle: nil)
         modalPresentationStyle = .fullScreen
     }
@@ -26,7 +35,12 @@ final class ImageViewerViewController: BaseViewController<ImageViewerView> {
         super.viewDidLoad()
         setupScrollView()
         setupGestures()
-        loadImage()
+
+        if let image = image {
+            displayImage(image)
+        } else if let imageURL = imageURL {
+            loadImage(from: imageURL)
+        }
     }
 
     private func setupScrollView() {
@@ -43,7 +57,13 @@ final class ImageViewerViewController: BaseViewController<ImageViewerView> {
         mainView.scrollView.addGestureRecognizer(doubleTapGesture)
     }
 
-    private func loadImage() {
+    private func displayImage(_ image: UIImage) {
+        print("✅ [ImageViewer] Displaying direct image: \(image.size)")
+        mainView.imageView.image = image
+        updateImageViewConstraints(for: image.size)
+    }
+
+    private func loadImage(from url: URL) {
         // Authorization 헤더 추가 (ChatMessageCell과 동일한 방식)
         var headers: [String: String] = [
             "SeSACKey": APIKey.sesacKey
@@ -62,7 +82,7 @@ final class ImageViewerViewController: BaseViewController<ImageViewerView> {
         }
 
         mainView.imageView.kf.setImage(
-            with: imageURL,
+            with: url,
             placeholder: UIImage(systemName: "photo"),
             options: [
                 .requestModifier(modifier),
@@ -72,7 +92,7 @@ final class ImageViewerViewController: BaseViewController<ImageViewerView> {
         ) { [weak self] result in
             switch result {
             case .success(let value):
-                print("✅ [ImageViewer] Image loaded: \(value.image.size)")
+                print("✅ [ImageViewer] Image loaded from URL: \(value.image.size)")
                 self?.updateImageViewConstraints(for: value.image.size)
             case .failure(let error):
                 print("❌ [ImageViewer] Image load failed: \(error)")
