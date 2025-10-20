@@ -264,6 +264,9 @@ final class ChatReactor: Reactor {
                             await ChatStorage.shared.saveMessage(message)
                         }
 
+                        // ✅ 알림 처리 로직
+                        self.handleNotificationForMessage(message)
+
                         if self.isInitialLoadComplete {
                             // 초기 로딩 완료 → 즉시 UI에 반영
                             print("📨 [ChatReactor] Appending message to UI (initial load complete)")
@@ -310,10 +313,25 @@ final class ChatReactor: Reactor {
                     send(.setIsUploadingImages(true))
                     print("📤 [ChatReactor] Starting image upload...")
 
-                    // 1-1. 파일 업로드 API 호출 (이미 Data이므로 리사이징 불필요)
+                    // 1-1. 파일 메타정보 생성 (Data에서 PDF 여부 추출)
+                    let fileDataList = selectedImageDataList.enumerated().map { index, data -> (data: Data, fileName: String, isPDF: Bool) in
+                        // PDF 매직 넘버 확인 (%PDF)
+                        var isPDF = false
+                        if data.count > 4 {
+                            let header = data.prefix(4)
+                            if let headerString = String(data: header, encoding: .ascii), headerString == "%PDF" {
+                                isPDF = true
+                            }
+                        }
+
+                        let fileName = isPDF ? "file_\(Date().timeIntervalSince1970)_\(index).pdf" : ""
+                        return (data, fileName, isPDF)
+                    }
+
+                    // 1-2. 파일 업로드 API 호출
                     filePaths = try await self.chatRepository.uploadFiles(
                         roomId: self.roomId,
-                        imageDataList: selectedImageDataList
+                        fileDataList: fileDataList
                     )
 
                     print("✅ [ChatReactor] Files uploaded: \(filePaths)")
@@ -385,6 +403,46 @@ final class ChatReactor: Reactor {
                 return Disposables.create()
             }
         ])
+    }
+
+    /// Socket으로 메시지를 받았을 때 알림 처리
+    /// - 내 메시지이거나 같은 방 보는 중이면 알림 표시 안 함
+    /// - 앱 실행 중(Foreground)이면 In-App Banner 표시
+    /// - 배지 개수 증가
+    private func handleNotificationForMessage(_ message: ChatMessageEntity) {
+//        print("🔔 [ChatReactor] Handling notification for message from \(message.sender.nick)")
+
+        // 1. 알림을 표시해야 하는지 판단
+        let shouldNotify = ChatStateManager.shared.shouldShowNotification(
+            for: roomId,
+            isMyMessage: message.isMyMessage
+        )
+
+        if !shouldNotify {
+            print("🔕 [ChatReactor] Notification blocked for message: \(message.content)")
+            return
+        }
+
+        // 2. 배지 개수 증가
+        BadgeManager.shared.incrementUnreadCount(for: roomId)
+        print("📊 [ChatReactor] Badge incremented for room: \(roomId)")
+
+        // 3. In-App Banner 알림 발송
+        // SceneDelegate가 앱 상태를 확인하여 포그라운드일 때만 배너 표시
+        DispatchQueue.main.async {
+            print("📱 [ChatReactor] Posting in-app notification event")
+
+            NotificationCenter.default.post(
+                name: .showInAppNotification,
+                object: nil,
+                userInfo: [
+                    "roomId": message.roomId,
+                    "nickname": message.sender.nickname,
+                    "message": message.content,
+                    "profileImage": message.sender.profileImageUrl ?? ""
+                ]
+            )
+        }
     }
 
     deinit {
