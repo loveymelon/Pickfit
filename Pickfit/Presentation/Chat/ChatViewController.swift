@@ -42,18 +42,69 @@ final class ChatViewController: BaseViewController<ChatView>, View {
         // 즉시 초기 데이터 로드 및 소켓 연결 시작
         print("🚀 [ChatViewController] Triggering viewDidLoad action")
         chatReactor.action.onNext(.viewDidLoad)
+
+        // PDF 테스트 버튼 추가 (개발용)
+        #if DEBUG
+        addPDFTestButton()
+        #endif
     }
+
+    #if DEBUG
+    private func addPDFTestButton() {
+        let testButton = UIButton(type: .system)
+        testButton.setTitle("PDF 테스트", for: .normal)
+        testButton.backgroundColor = .systemBlue
+        testButton.setTitleColor(.white, for: .normal)
+        testButton.layer.cornerRadius = 8
+        testButton.addTarget(self, action: #selector(testPDFViewer), for: .touchUpInside)
+
+        view.addSubview(testButton)
+        testButton.snp.makeConstraints {
+            $0.top.equalTo(view.safeAreaLayoutGuide).offset(60)
+            $0.trailing.equalToSuperview().offset(-16)
+            $0.width.equalTo(100)
+            $0.height.equalTo(40)
+        }
+    }
+
+    @objc private func testPDFViewer() {
+        // 테스트용 공개 PDF URL (Apple 샘플 PDF)
+        let testPDFURL = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+        presentPDFViewer(urlString: testPDFURL)
+    }
+    #endif
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(true, animated: false)
         tabBarController?.tabBar.isHidden = true
+
+        // ✅ 중요: 현재 채팅방을 "활성 방"으로 등록
+        // 이 방의 메시지는 알림이 표시되지 않음
+        ChatStateManager.shared.setActiveRoom(roomInfo.roomId)
+        print("📊 [ChatViewController] Active room set: \(roomInfo.roomId)")
+
+        // 배지 초기화: 이 방의 읽지 않은 메시지 개수를 0으로
+        BadgeManager.shared.clearUnreadCount(for: roomInfo.roomId)
+
+        // 탭바 배지 업데이트
+        if let tabBarController = tabBarController {
+            let totalCount = BadgeManager.shared.getTotalUnreadCount()
+            let chatTabIndex = 2 // 채팅 탭 인덱스 (MainTabBarController 구조에 맞게 조정)
+            tabBarController.tabBar.items?[chatTabIndex].badgeValue = totalCount > 0 ? "\(totalCount)" : nil
+            print("📊 [ChatViewController] Tab badge updated: \(totalCount)")
+        }
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         navigationController?.setNavigationBarHidden(false, animated: false)
         tabBarController?.tabBar.isHidden = false
+
+        // ✅ 중요: 채팅방을 나갈 때 "활성 방" 해제
+        // 이제부터 이 방의 메시지는 알림이 표시됨
+        ChatStateManager.shared.clearActiveRoom()
+        print("📊 [ChatViewController] Active room cleared")
     }
 
     private func setupTableView() {
@@ -157,10 +208,10 @@ final class ChatViewController: BaseViewController<ChatView>, View {
             })
             .disposed(by: disposeBag)
 
-        // 첨부 버튼 (이미지 피커)
+        // 첨부 버튼 (파일/사진 선택)
         mainView.attachButton.rx.tap
             .subscribe(onNext: { [weak self] in
-                self?.presentImagePicker()
+                self?.showAttachmentOptions()
             })
             .disposed(by: disposeBag)
 
@@ -269,36 +320,55 @@ final class ChatViewController: BaseViewController<ChatView>, View {
             })
             .disposed(by: disposeBag)
 
-        // 선택된 이미지 상태 구독 (이미지 미리보기 업데이트)
+        // 선택된 파일 상태 구독 (프리뷰 업데이트)
+        // ⚠️ 주의: uploadFiles/PHPicker에서 이미 프리뷰를 업데이트하므로
+        // 여기서는 파일 제거/전송 완료 시 프리뷰를 숨기는 용도로만 사용
         reactor.state.map { $0.selectedImageDataList }
             .distinctUntilChanged()
             .observe(on: MainScheduler.instance)
             .subscribe(onNext: { [weak self] imageDataList in
                 guard let self = self else { return }
-                print("🖼️ [ChatViewController] Selected images updated: \(imageDataList.count)")
+                print("🖼️ [ChatViewController] Selected files state updated: \(imageDataList.count)")
 
-                // Data → UIImage 변환
-                let images = imageDataList.compactMap { data -> UIImage? in
-                    if let image = UIImage(data: data) {
-                        print("✅ [ChatViewController] Image converted: \(image.size)")
-                        return image
-                    } else {
-                        print("❌ [ChatViewController] Failed to convert data to UIImage")
-                        return nil
-                    }
-                }
-
-                print("🖼️ [ChatViewController] Converted images: \(images.count)")
-
-                self.mainView.imagePreviewView.updateImages(images) { index in
-                    // X 버튼 탭 시 해당 이미지 제거
-                    reactor.action.onNext(.removeImage(index))
+                // 파일이 없으면 프리뷰 숨김 (전송 완료 후)
+                if imageDataList.isEmpty {
+                    self.selectedFileData.removeAll()
+                    self.mainView.imagePreviewView.updateFiles([]) { _ in }
                 }
             })
             .disposed(by: disposeBag)
     }
 
     // MARK: - Image Picker
+
+    private func showAttachmentOptions() {
+        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+
+        // 사진 선택
+        let photoAction = UIAlertAction(title: "사진 전송", style: .default) { [weak self] _ in
+            self?.presentImagePicker()
+        }
+
+        // 파일 선택
+        let fileAction = UIAlertAction(title: "파일 전송", style: .default) { [weak self] _ in
+            self?.presentDocumentPicker()
+        }
+
+        // 취소
+        let cancelAction = UIAlertAction(title: "취소", style: .cancel)
+
+        alert.addAction(photoAction)
+        alert.addAction(fileAction)
+        alert.addAction(cancelAction)
+
+        // iPad 대응
+        if let popoverController = alert.popoverPresentationController {
+            popoverController.sourceView = mainView.attachButton
+            popoverController.sourceRect = mainView.attachButton.bounds
+        }
+
+        present(alert, animated: true)
+    }
 
     private func presentImagePicker() {
         var configuration = PHPickerConfiguration()
@@ -308,6 +378,181 @@ final class ChatViewController: BaseViewController<ChatView>, View {
         let picker = PHPickerViewController(configuration: configuration)
         picker.delegate = self
         present(picker, animated: true)
+    }
+
+    private func presentDocumentPicker() {
+        // API 지원 확장자: jpg, png, jpeg, gif, pdf
+        let supportedTypes: [UTType] = [
+            .jpeg,  // jpg, jpeg
+            .png,
+            .gif,
+            .pdf
+        ]
+
+        let documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: supportedTypes, asCopy: false)
+        documentPicker.delegate = self
+        documentPicker.allowsMultipleSelection = true
+        present(documentPicker, animated: true)
+    }
+
+    private func presentPDFViewer(urlString: String) {
+        print("📄 [PDF Viewer] Opening: \(urlString)")
+
+        // URL 문자열을 URL로 변환
+        var pdfURL: URL?
+
+        if urlString.hasPrefix("http://") || urlString.hasPrefix("https://") {
+            // 원격 URL
+            pdfURL = URL(string: urlString)
+        } else if urlString.hasPrefix("/") {
+            // 서버 상대 경로 -> 절대 URL로 변환
+            // APIKey.baseURL을 사용 (ChatMessageCell과 동일한 방식)
+            let fullURLString = APIKey.baseURL + urlString
+            pdfURL = URL(string: fullURLString)
+            print("🔗 [PDF Viewer] Constructed URL: \(fullURLString)")
+        } else {
+            // 로컬 파일 경로
+            pdfURL = URL(fileURLWithPath: urlString)
+        }
+
+        guard let url = pdfURL else {
+            print("❌ [PDF Viewer] Invalid URL: \(urlString)")
+            return
+        }
+
+        print("✅ [PDF Viewer] Final URL: \(url.absoluteString)")
+
+        let fileName = (urlString as NSString).lastPathComponent
+        let pdfViewerVC = PDFViewerViewController(pdfURL: url, fileName: fileName)
+        pdfViewerVC.modalPresentationStyle = .fullScreen
+        present(pdfViewerVC, animated: true)
+    }
+
+    // 파일 타입과 데이터를 함께 저장하는 구조체
+    private struct FileData {
+        let data: Data
+        let fileName: String
+        let isPDF: Bool
+    }
+
+    private var selectedFileData: [FileData] = []
+
+    private func uploadFiles(_ urls: [URL]) {
+        guard let reactor = reactor else { return }
+
+        var fileDataList: [FileData] = []
+
+        for url in urls {
+            // Security-scoped resource 접근 시작 (asCopy: false이므로 필수)
+            guard url.startAccessingSecurityScopedResource() else {
+                print("❌ [File Upload] Cannot access file: \(url.lastPathComponent)")
+                continue
+            }
+
+            do {
+                // 직접 파일 Data 읽기
+                let fileData = try Data(contentsOf: url)
+                let fileName = url.lastPathComponent
+
+                // UTType과 파일명 둘 다 체크해서 PDF 감지
+                var isPDF = false
+
+                // 1. UTType으로 체크 (가장 정확)
+                if let contentType = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType {
+                    isPDF = contentType.conforms(to: .pdf)
+                    print("🔍 [File Upload] UTType check: \(contentType.identifier), isPDF: \(isPDF)")
+                }
+
+                // 2. UTType 실패 시 확장자로 체크
+                if !isPDF {
+                    isPDF = fileName.lowercased().hasSuffix(".pdf")
+                    print("🔍 [File Upload] Extension check: \(fileName), isPDF: \(isPDF)")
+                }
+
+                // 3. Data의 매직 넘버로 체크 (PDF는 %PDF로 시작)
+                if !isPDF && fileData.count > 4 {
+                    let header = fileData.prefix(4)
+                    if let headerString = String(data: header, encoding: .ascii), headerString == "%PDF" {
+                        isPDF = true
+                        print("🔍 [File Upload] Magic number check: Found PDF signature")
+                    }
+                }
+
+                fileDataList.append(FileData(data: fileData, fileName: fileName, isPDF: isPDF))
+                print("✅ [File Upload] File loaded: \(fileName), Size: \(fileData.count) bytes, isPDF: \(isPDF)")
+            } catch {
+                print("❌ [File Upload] Failed to load file: \(error)")
+            }
+
+            // 접근 종료
+            url.stopAccessingSecurityScopedResource()
+        }
+
+        if !fileDataList.isEmpty {
+            selectedFileData = fileDataList
+            print("✅ [File Upload] \(fileDataList.count) files loaded, updating preview")
+
+            // 프리뷰 업데이트
+            updateFilePreview()
+
+            // Reactor에 Data만 전달 (업로드는 Reactor에서 selectedFileData 사용)
+            let dataList = fileDataList.map { $0.data }
+            reactor.action.onNext(.selectImages(dataList))
+        }
+    }
+
+    private func updateFilePreview() {
+        guard !selectedFileData.isEmpty else { return }
+
+        // FileData → ImagePreviewView.FilePreviewType 변환
+        var previewFiles: [ImagePreviewView.FilePreviewType] = []
+
+        for fileData in selectedFileData {
+            if fileData.isPDF {
+                previewFiles.append(.pdf(fileData.data, fileName: fileData.fileName))
+            } else {
+                // 이미지로 변환
+                if let image = UIImage(data: fileData.data) {
+                    previewFiles.append(.image(image))
+                }
+            }
+        }
+
+        print("📄 [File Preview] Updating preview with \(previewFiles.count) files")
+
+        // 프리뷰 업데이트
+        mainView.imagePreviewView.updateFiles(previewFiles) { [weak self] index in
+            self?.reactor?.action.onNext(.removeImage(index))
+            // selectedFileData도 함께 제거
+            self?.selectedFileData.remove(at: index)
+            self?.updateFilePreview()
+        }
+
+        // 이미지 탭 콜백 설정
+        mainView.imagePreviewView.onImageTapped = { [weak self] image in
+            print("🖼️ [File Preview] Image tapped in preview")
+            let imageViewerVC = ImageViewerViewController(image: image)
+            self?.present(imageViewerVC, animated: true)
+        }
+
+        // PDF 탭 콜백 설정
+        mainView.imagePreviewView.onPDFTapped = { [weak self] pdfData, fileName in
+            print("📄 [File Preview] PDF tapped in preview: \(fileName)")
+            self?.presentPDFViewerFromData(pdfData: pdfData, fileName: fileName)
+        }
+    }
+
+    private func presentPDFViewerFromData(pdfData: Data, fileName: String) {
+        // Data를 임시 파일로 저장
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        do {
+            try pdfData.write(to: tempURL)
+            let pdfViewerVC = PDFViewerViewController(pdfURL: tempURL, fileName: fileName)
+            pdfViewerVC.modalPresentationStyle = .fullScreen
+            present(pdfViewerVC, animated: true)
+        } catch {
+            print("❌ [PDF Viewer] Failed to save temp file: \(error)")
+        }
     }
 
     deinit {
@@ -345,6 +590,12 @@ extension ChatViewController: UITableViewDataSource {
         cell.onImageTapped = { [weak self] imageURL in
             let imageViewerVC = ImageViewerViewController(imageURL: imageURL)
             self?.present(imageViewerVC, animated: true)
+        }
+
+        // PDF 탭 시 PDF 뷰어 표시
+        cell.onPDFTapped = { [weak self] pdfURLString in
+            print("📞 [ChatViewController] onPDFTapped callback received: \(pdfURLString)")
+            self?.presentPDFViewer(urlString: pdfURLString)
         }
 
         return cell
@@ -456,20 +707,6 @@ extension ChatViewController: UITableViewDelegate {
     }
 }
 
-// MARK: - UIGestureRecognizerDelegate (주석처리)
-//extension ChatViewController: UIGestureRecognizerDelegate {
-//    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-//        // inputContainerView 또는 그 하위 뷰를 터치하면 제스처 무시 (TextView, SendButton 등)
-//        if touch.view?.isDescendant(of: mainView.inputContainerView) == true {
-//            print("🚫 [Gesture] Touch ignored - inside inputContainer")
-//            return false
-//        }
-//
-//        print("✅ [Gesture] Touch received on tableView - will dismiss keyboard")
-//        return true
-//    }
-//}
-
 // MARK: - UITextViewDelegate
 extension ChatViewController: UITextViewDelegate {
     func textViewDidChange(_ textView: UITextView) {
@@ -549,7 +786,85 @@ extension ChatViewController: PHPickerViewControllerDelegate {
             )
 
             print("✅ [PHPicker] Images resized: \(imageDataList.count)")
+
+            // selectedFileData 업데이트 (이미지만 해당)
+            self.selectedFileData = imageDataList.map { data in
+                FileData(data: data, fileName: "image.jpg", isPDF: false)
+            }
+
+            // 프리뷰 업데이트
+            self.updateFilePreview()
+
+            // Reactor에 전달
             reactor.action.onNext(.selectImages(imageDataList))
         }
+    }
+}
+
+// MARK: - UIDocumentPickerDelegate
+
+extension ChatViewController: UIDocumentPickerDelegate {
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        controller.dismiss(animated: true)
+
+        guard !urls.isEmpty else {
+            print("📄 [DocumentPicker] No files selected")
+            return
+        }
+
+        print("📄 [DocumentPicker] Selected \(urls.count) files")
+
+        let maxFileSize: Int64 = 5 * 1024 * 1024 // 5MB
+
+        var validFiles: [URL] = []
+        var oversizedFiles: [String] = []
+
+        for url in urls {
+            // 파일 접근 권한 획득
+            guard url.startAccessingSecurityScopedResource() else {
+                print("❌ [DocumentPicker] Cannot access file: \(url.lastPathComponent)")
+                continue
+            }
+            defer { url.stopAccessingSecurityScopedResource() }
+
+            do {
+                let fileAttributes = try FileManager.default.attributesOfItem(atPath: url.path)
+                let fileSize = fileAttributes[.size] as? Int64 ?? 0
+
+                print("📄 [DocumentPicker] File: \(url.lastPathComponent), Size: \(fileSize) bytes")
+
+                if fileSize > maxFileSize {
+                    let fileSizeMB = Double(fileSize) / (1024.0 * 1024.0)
+                    oversizedFiles.append("\(url.lastPathComponent) (\(String(format: "%.1f", fileSizeMB))MB)")
+                    print("❌ [DocumentPicker] File too large: \(url.lastPathComponent)")
+                } else {
+                    validFiles.append(url)
+                }
+            } catch {
+                print("❌ [DocumentPicker] Failed to get file size: \(error)")
+            }
+        }
+
+        // 용량 초과 파일 알림
+        if !oversizedFiles.isEmpty {
+            let alert = UIAlertController(
+                title: "파일 크기 초과",
+                message: "다음 파일은 5MB를 초과하여 선택할 수 없습니다:\n\n\(oversizedFiles.joined(separator: "\n"))",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "확인", style: .default))
+            present(alert, animated: true)
+        }
+
+        // 유효한 파일이 있으면 업로드
+        if !validFiles.isEmpty {
+            print("✅ [DocumentPicker] Valid files: \(validFiles.count)")
+            uploadFiles(validFiles)
+        }
+    }
+
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        controller.dismiss(animated: true)
+        print("📄 [DocumentPicker] Cancelled")
     }
 }
