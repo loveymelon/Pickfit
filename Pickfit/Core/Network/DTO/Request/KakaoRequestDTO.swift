@@ -9,4 +9,5 @@ import Foundation
 
 struct KakaoRequestDTO: DTO, Encodable {
     let oauthToken: String
+    let deviceToken: String?  // APNS deviceToken (옵셔널: 토큰이 없을 수도 있음)
 }

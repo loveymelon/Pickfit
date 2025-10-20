@@ -15,13 +15,22 @@ final class AuthRepository {
     }
 
     func loginWithKakao(oauthToken: String) async throws {
+        // UserDefaults에서 FCM 토큰 가져오기 (AppDelegate에서 저장했음)
+        let deviceToken = UserDefaults.standard.string(forKey: "deviceToken")
+        print("📤 [AuthRepository] Kakao Login with FCM Token: \(deviceToken ?? "none")")
+
         let dto = try await NetworkManager.auth.fetch(
             dto: KakaoResponseDTO.self,
-            router: LoginRouter.kakaoLogin(KakaoRequestDTO(oauthToken: oauthToken))
+            router: LoginRouter.kakaoLogin(KakaoRequestDTO(
+                oauthToken: oauthToken,
+                deviceToken: deviceToken  // FCM 토큰 추가
+            ))
         )
 
         await tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
         await tokenStorage.writeUserId(dto.userId)
+
+        print("✅ [AuthRepository] Kakao Login Success - userId: \(dto.userId)")
     }
 
     func loginWithApple(identityToken: String, nickname: String?) async throws {
@@ -29,11 +38,14 @@ final class AuthRepository {
         print("   - idToken: \(identityToken.prefix(20))...")
         print("   - nick: \(nickname ?? "nil")")
 
-        // deviceToken은 선택사항 - 푸시 알림용 (추후 구현 시 추가)
+        // UserDefaults에서 FCM 토큰 가져오기 (AppDelegate에서 저장했음)
+        let deviceToken = UserDefaults.standard.string(forKey: "deviceToken")
+        print("📤 [AuthRepository] Apple Login with deviceToken: \(deviceToken ?? "none")")
+
         let requestDTO = AppleRequestDTO(
             idToken: identityToken,
             nick: nickname,
-            deviceToken: nil
+            deviceToken: deviceToken  // FCM 토큰 추가
         )
 
         // JSON 확인용 디버깅
