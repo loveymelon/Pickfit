@@ -47,12 +47,12 @@ final class ChatRepository {
     /// 파일 업로드 (multipart/form-data)
     /// - Parameters:
     ///   - roomId: 채팅방 ID
-    ///   - imageDataList: 압축된 이미지 Data 배열 (최대 5개)
+    ///   - fileDataList: 파일 Data와 메타정보 배열 (최대 5개)
     /// - Returns: 업로드된 파일 경로 배열
-    func uploadFiles(roomId: String, imageDataList: [Data]) async throws -> [String] {
+    func uploadFiles(roomId: String, fileDataList: [(data: Data, fileName: String, isPDF: Bool)]) async throws -> [String] {
         let dto = try await NetworkManager.shared.uploadMultipart(
             dto: FileUploadResponseDTO.self,
-            router: ChatRouter.uploadFiles(roomId: roomId, imageDataList: imageDataList)
+            router: ChatRouter.uploadFiles(roomId: roomId, fileDataList: fileDataList)
         )
 
         print("✅ [ChatRepository] File upload success: \(dto.files.count) files")

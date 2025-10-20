@@ -12,7 +12,7 @@ enum ChatRouter: Router {
     case fetchChatRoomList
     case fetchChatHistory(roomId: String, next: String?)
     case sendMessage(roomId: String, content: String, files: [String])
-    case uploadFiles(roomId: String, imageDataList: [Data])  // 파일 업로드 (multipart/form-data)
+    case uploadFiles(roomId: String, fileDataList: [(data: Data, fileName: String, isPDF: Bool)])  // 파일 업로드 (multipart/form-data)
 }
 
 extension ChatRouter {
@@ -104,16 +104,31 @@ extension ChatRouter {
             return .url
         case .sendMessage:
             return .json
-        case .uploadFiles(_, let imageDataList):
+        case .uploadFiles(_, let fileDataList):
             // MultipartFormData 구성
             let formData = MultipartFormData()
-            for (index, imageData) in imageDataList.enumerated() {
+            for (index, fileInfo) in fileDataList.enumerated() {
+                let fileName: String
+                let mimeType: String
+
+                if fileInfo.isPDF {
+                    // PDF 파일
+                    fileName = fileInfo.fileName.isEmpty ? "file_\(Date().timeIntervalSince1970)_\(index).pdf" : fileInfo.fileName
+                    mimeType = "application/pdf"
+                } else {
+                    // 이미지 파일
+                    fileName = "image_\(Date().timeIntervalSince1970)_\(index).jpg"
+                    mimeType = "image/jpeg"
+                }
+
                 formData.append(
-                    imageData,
+                    fileInfo.data,
                     withName: "files",
-                    fileName: "image_\(Date().timeIntervalSince1970)_\(index).jpg",
-                    mimeType: "image/jpeg"
+                    fileName: fileName,
+                    mimeType: mimeType
                 )
+
+                print("📤 [ChatRouter] Appending file: \(fileName), mimeType: \(mimeType)")
             }
             return .multiPart(formData)
         }
