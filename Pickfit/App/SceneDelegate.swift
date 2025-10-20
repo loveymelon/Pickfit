@@ -43,12 +43,121 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             name: .navigateToLogin,
             object: nil
         )
+
+        // In-App Banner 표시 구독
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleShowInAppNotification(_:)),
+            name: .showInAppNotification,
+            object: nil
+        )
+
+        // 채팅방 열기 구독 (푸시 알림 탭 시)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleOpenChatRoom(_:)),
+            name: .openChatRoom,
+            object: nil
+        )
     }
 
     @objc private func handleNavigateToLogin() {
         guard let window = window else { return }
         window.rootViewController = LoginViewController()
         UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: nil)
+    }
+
+    /// In-App Banner 표시 (앱 실행 중 다른 화면에서 메시지 받았을 때)
+    @objc private func handleShowInAppNotification(_ notification: Notification) {
+        guard let window = window,
+              let userInfo = notification.userInfo,
+              let roomId = userInfo["roomId"] as? String,
+              let nickname = userInfo["nickname"] as? String,
+              let message = userInfo["message"] as? String else {
+            print("⚠️ [SceneDelegate] Invalid notification userInfo")
+            return
+        }
+
+        // ✅ 앱 상태 확인: 포그라운드일 때만 배너 표시
+        guard let scene = window.windowScene,
+              scene.activationState == .foregroundActive else {
+            print("🔕 [SceneDelegate] App is not in foreground, skipping banner")
+            return
+        }
+
+        let profileImage = userInfo["profileImage"] as? String
+        print("🔔 [SceneDelegate] Showing In-App Banner for \(nickname)")
+
+        // 메인 스레드에서 UI 업데이트
+        DispatchQueue.main.async {
+            // 기존 배너가 있으면 제거 (중복 방지)
+            window.subviews.compactMap { $0 as? InAppNotificationView }.forEach { $0.removeFromSuperview() }
+
+            // 새 배너 생성
+            let bannerView = InAppNotificationView()
+            window.addSubview(bannerView)
+
+            bannerView.snp.makeConstraints {
+                $0.top.equalTo(window.safeAreaLayoutGuide.snp.top)
+                $0.leading.trailing.equalToSuperview()
+                $0.height.equalTo(96)
+            }
+
+            // 배너 표시
+            bannerView.show(
+                nickname: nickname,
+                message: message,
+                profileImage: profileImage
+            ) { [weak self] in
+                // 배너 탭 시 해당 채팅방 열기
+                self?.openChatRoom(roomId: roomId)
+            }
+        }
+    }
+
+    /// 특정 채팅방 열기 (푸시 알림 탭 시 또는 In-App Banner 탭 시)
+    @objc private func handleOpenChatRoom(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let roomId = userInfo["roomId"] as? String else {
+            print("⚠️ [SceneDelegate] Invalid roomId")
+            return
+        }
+
+        print("📱 [SceneDelegate] Opening chat room: \(roomId)")
+        openChatRoom(roomId: roomId)
+    }
+
+    /// 채팅방 열기 실제 구현
+    private func openChatRoom(roomId: String) {
+        guard let window = window,
+              let tabBarController = window.rootViewController as? MainTabBarController else {
+            print("⚠️ [SceneDelegate] TabBarController not found")
+            return
+        }
+
+        // TODO: roomId로 채팅방 정보 조회
+        // 실제 구현에서는 ChatRepository를 통해 채팅방 정보를 가져와야 함
+        // 여기서는 간단하게 ChatListViewController로 이동 후 해당 방 열기
+
+        // 1. 채팅 탭으로 이동 (index 2)
+        tabBarController.selectedIndex = 2
+
+        // 2. Navigation Stack 확인
+        if let navigationController = tabBarController.selectedViewController as? UINavigationController {
+            // 3. 이미 채팅방 화면이 열려있으면 pop
+            if navigationController.viewControllers.count > 1 {
+                navigationController.popToRootViewController(animated: false)
+            }
+
+            // 4. 채팅방 열기 (실제로는 ChatRepository로 방 정보 조회 필요)
+            // 임시로 roomId만 전달
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                // TODO: 실제 구현에서는 채팅방 정보를 가져와서 ChatViewController를 present
+                print("📱 [SceneDelegate] Room \(roomId) should be opened here")
+                // let chatVC = ChatViewController(roomInfo: ...)
+                // navigationController.pushViewController(chatVC, animated: true)
+            }
+        }
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
