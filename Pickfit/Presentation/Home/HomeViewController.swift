@@ -76,6 +76,21 @@ final class HomeViewController: BaseViewController<HomeView> {
                     ) as? HomeBannerCell else { return UICollectionViewCell() }
                     cell.configure(with: banner)
                     return cell
+                    
+                case .stores(let store):
+                    guard let cell = collectionView.dequeueReusableCell(
+                        withReuseIdentifier: CategoryCapsuleCell.identifier,
+                        for: indexPath
+                    ) as? CategoryCapsuleCell else { return UICollectionViewCell() }
+
+                    cell.configure(image: store.storeImageUrls.last, text: store.name)
+
+                    return cell
+                    
+                case .product(let product):
+                    guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: StoreProductCell.identifier, for: indexPath) as? StoreProductCell else { return UICollectionViewCell() }
+                    cell.configure(with: product)
+                    return cell
                 }
             }
         )
@@ -83,13 +98,52 @@ final class HomeViewController: BaseViewController<HomeView> {
         Observable.combineLatest(
             reactor.state.map { $0.stores }.distinctUntilChanged(),
             reactor.state.map { $0.categories }.distinctUntilChanged(),
-            reactor.state.map { $0.banners }.distinctUntilChanged()
+            reactor.state.map { $0.banners }.distinctUntilChanged(),
+            reactor.state.map { $0.menuList }
         )
-        .map { stores, categories, banners -> [HomeSectionModel] in
+        .map { stores, categories, banners, menuList -> [HomeSectionModel] in
+            let products: [ProductModel]
+            
+            if !menuList.isEmpty {
+                // menuList가 있으면 실제 메뉴 데이터 사용
+                products = menuList.compactMap { menu in
+                    // tag가 2개 이상이면 필터링
+                    guard menu.tags.count < 2 else { return nil }
+
+                    return ProductModel(
+                        menuId: menu.menuId,
+                        imageUrl: menu.menuImageUrl,
+                        title: menu.name,
+                        priceText: "\(menu.price)원",
+                        discountPercent: nil,
+                        isLiked: false,
+                        tags: menu.tags
+                    )
+                }
+            } else {
+                // menuList가 없으면 더미 데이터 사용
+                products = (0..<10).compactMap { index in
+                    let tagCount = Int.random(in: 0...3)
+                    guard tagCount < 2 else { return nil }
+
+                    return ProductModel(
+                        menuId: "dummy_\(index)",
+                        imageUrl: stores.first?.storeImageUrls.first ?? "",
+                        title: "상품 \(index + 1)",
+                        priceText: "50,000원",
+                        discountPercent: index % 2 == 0 ? 20 : nil,
+                        isLiked: false,
+                        tags: []
+                    )
+                }
+            }
+            
             return [
                 .main(stores),
                 .category(categories),
-                .banner(banners)
+                .banner(banners),
+                .stores(stores),
+                .product(products)
             ]
         }
         .bind(to: mainView.collectionView.rx.items(dataSource: dataSource))
@@ -122,7 +176,7 @@ extension HomeViewController {
         }
         
         let config = UICollectionViewCompositionalLayoutConfiguration()
-        config.interSectionSpacing = 18
+        config.interSectionSpacing = 14
         layout.configuration = config
         
         return layout
@@ -138,6 +192,12 @@ extension HomeViewController {
             
         case 2:
             return createBannerSection()
+            
+        case 3:
+            return createLogoSection()
+            
+        case 4:
+            return createItemListSection()
             
         default:
             assertionFailure("Unexpected section index: \(sectionIndex)")
@@ -175,13 +235,13 @@ extension HomeViewController {
         let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(1.0))
         let item = NSCollectionLayoutItem(layoutSize: itemSize)
 
-        let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(0.22), heightDimension: .fractionalHeight(0.13))
+        let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(0.18), heightDimension: .fractionalHeight(0.11))
         let group = NSCollectionLayoutGroup.vertical(layoutSize: groupSize, subitems: [item])
-
+        
         let section = NSCollectionLayoutSection(group: group)
         section.orthogonalScrollingBehavior = .continuous
         section.interGroupSpacing = 12
-        section.contentInsets = .init(top: 0, leading: 16, bottom: 0, trailing: 16)
+        section.contentInsets = .init(top: 0, leading: 20, bottom: 0, trailing: 20)
 
         return section
     }
@@ -189,13 +249,57 @@ extension HomeViewController {
     private func createBannerSection() -> NSCollectionLayoutSection {
         let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(1.0))
         let item = NSCollectionLayoutItem(layoutSize: itemSize)
-        item.contentInsets = .init(top: 0, leading: 10, bottom: 0, trailing: 10)
+        item.contentInsets = .zero
         
-        let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(0.15))
+        let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(0.12))
         let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
+        group.contentInsets = .init(top: 0, leading: 20, bottom: 0, trailing: 20)
         
         let section = NSCollectionLayoutSection(group: group)
-        section.orthogonalScrollingBehavior = .groupPaging
+        section.orthogonalScrollingBehavior = .paging
+        section.interGroupSpacing = 0
+        section.contentInsets = .zero
+        
+        return section
+    }
+    
+    private func createLogoSection() -> NSCollectionLayoutSection {
+        let itemSize = NSCollectionLayoutSize(
+            widthDimension: .estimated(120),
+            heightDimension: .fractionalHeight(1.0)
+        )
+        let item = NSCollectionLayoutItem(layoutSize: itemSize)
+        item.contentInsets = .zero
+
+        let groupSize = NSCollectionLayoutSize(
+            widthDimension: .estimated(120),
+            heightDimension: .absolute(36)
+        )
+        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
+
+        let section = NSCollectionLayoutSection(group: group)
+        section.orthogonalScrollingBehavior = .continuous
+        section.interGroupSpacing = 8
+        section.contentInsets = .init(top: 0, leading: 20, bottom: 0, trailing: 20)
+
+        return section
+    }
+    
+    private func createItemListSection() -> NSCollectionLayoutSection {
+        let item = NSCollectionLayoutItem(
+            layoutSize: .init(widthDimension: .fractionalWidth(0.5),
+                              heightDimension: .estimated(240))
+        )
+        item.contentInsets = .init(top: 0, leading: 8, bottom: 12, trailing: 8)
+
+        let group = NSCollectionLayoutGroup.horizontal(
+            layoutSize: .init(widthDimension: .fractionalWidth(1.0),
+                              heightDimension: .estimated(240)),
+            subitems: [item, item]
+        )
+
+        let section = NSCollectionLayoutSection(group: group)
+        section.contentInsets = .init(top: 0, leading: 12, bottom: 16, trailing: 12)
         
         return section
     }

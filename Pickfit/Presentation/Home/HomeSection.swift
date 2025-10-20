@@ -11,6 +11,8 @@ enum HomeSectionModel {
     case main([StoreEntity])
     case category([Category])
     case banner([BannerResponseDTO.Banner])
+    case stores([StoreEntity])
+    case product([ProductModel])
 }
 
 extension HomeSectionModel: SectionModelType {
@@ -24,6 +26,10 @@ extension HomeSectionModel: SectionModelType {
             return categories.map { .category($0) }
         case .banner(let banners):
             return banners.map { .banner($0) }
+        case .stores(let storesDetail):
+            return storesDetail.map { .stores($0) }
+        case .product(let products):
+            return products.map { .product($0) }
         }
     }
 
@@ -53,6 +59,22 @@ extension HomeSectionModel: SectionModelType {
                 return nil
             }
             self = .banner(banners)
+        case .stores:
+            let stores = items.compactMap { item -> StoreEntity? in
+                if case .stores(let store) = item {
+                    return store
+                }
+                return nil
+            }
+            self = .stores(stores)
+        case .product:
+            let products = items.compactMap { item -> ProductModel? in
+                if case .product(let product) = item {
+                    return product
+                }
+                return nil
+            }
+            self = .product(products)
         }
     }
 }
@@ -61,4 +83,6 @@ enum HomeSectionItem {
     case store(StoreEntity)
     case category(Category)
     case banner(BannerResponseDTO.Banner)
+    case stores(StoreEntity)
+    case product(ProductModel)
 }

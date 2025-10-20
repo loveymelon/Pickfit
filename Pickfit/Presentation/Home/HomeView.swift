@@ -26,6 +26,8 @@ final class HomeView: BaseView {
         $0.register(HomeMainCell.self, forCellWithReuseIdentifier: HomeMainCell.identifier)
         $0.register(HomeCategoryCell.self, forCellWithReuseIdentifier: HomeCategoryCell.identifier)
         $0.register(HomeBannerCell.self, forCellWithReuseIdentifier: HomeBannerCell.identifier)
+        $0.register(CategoryCapsuleCell.self, forCellWithReuseIdentifier: CategoryCapsuleCell.identifier)
+        $0.register(StoreProductCell.self, forCellWithReuseIdentifier: StoreProductCell.identifier)
     }
     
     override init(frame: CGRect) {

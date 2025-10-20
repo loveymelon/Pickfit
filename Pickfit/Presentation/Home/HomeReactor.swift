@@ -27,6 +27,7 @@ final class HomeReactor: Reactor {
         case setStores(stores: [StoreEntity], nextCursor: String)
         case setBanners(BannerResponseDTO)
         case setError(Error)
+        case setMenuList([StoreDetailEntity.Menu])
         case logout
     }
 
@@ -39,6 +40,7 @@ final class HomeReactor: Reactor {
         var nextCursor: String = ""
         var errorMessage: String? = nil
         var shouldNavigateToLogin: Bool = false
+        var menuList: [StoreDetailEntity.Menu] = []
     }
 
     let initialState = State()
@@ -50,7 +52,9 @@ final class HomeReactor: Reactor {
 
         case .viewIsAppearing:
             return run(
-                operation: { send in
+                operation: { [weak self] send in
+                    guard let self else { return }
+                    
                     print("📡 [API] HomeReactor - Starting API calls")
                     send(.setLoading(true))
 
@@ -67,6 +71,12 @@ final class HomeReactor: Reactor {
                     print("✅ [API] Stores received: \(stores.stores.count) items")
                     print("✅ [API] Banners received: \(banners.data.count) items")
                     send(.setStores(stores: stores.stores, nextCursor: stores.nextCursor))
+                    
+                    let storeDetail = try await self.storeRepository.fetchStoreDetail(storeId: stores.stores[0].storeId)
+                    
+                    send(.setMenuList(storeDetail.menuList))
+                    //                    await self.storeRepository.fetchStoreDetail(storeId: <#T##String#>)
+                    
                     send(.setBanners(banners))
                 },
                 onError: { error in
@@ -104,6 +114,9 @@ final class HomeReactor: Reactor {
         case .setError(let error):
             newState.isLoading = false
             newState.errorMessage = error.localizedDescription
+            
+        case .setMenuList(let menu):
+            newState.menuList = menu
 
         case .logout:
             newState.shouldNavigateToLogin = true
