@@ -33,8 +33,8 @@ final class MainTabBarController: UITabBarController {
     @objc private func handleUpdateChatBadge() {
         let totalCount = BadgeManager.shared.getTotalUnreadCount()
 
-        // 채팅 탭은 index 2 (홈:0, 주문:1, 채팅:2, 마이:3)
-        let chatTabIndex = 2
+        // 채팅 탭은 index 3 (홈:0, 주문:1, 커뮤니티:2, 채팅:3, 마이:4)
+        let chatTabIndex = 3
 
         DispatchQueue.main.async {
             if totalCount > 0 {
@@ -74,6 +74,14 @@ final class MainTabBarController: UITabBarController {
             selectedImage: UIImage(named: "OrderFill")
         )
 
+        let communityVC = CommunityViewController()
+        let communityNav = UINavigationController(rootViewController: communityVC)
+        communityNav.tabBarItem = UITabBarItem(
+            title: "커뮤니티",
+            image: UIImage(systemName: "square.grid.2x2"),
+            selectedImage: UIImage(systemName: "square.grid.2x2.fill")
+        )
+
         let chatListVC = ChatListViewController()
         let chatListNav = UINavigationController(rootViewController: chatListVC)
         chatListNav.tabBarItem = UITabBarItem(
@@ -90,6 +98,6 @@ final class MainTabBarController: UITabBarController {
             selectedImage: UIImage(systemName: "person.fill")
         )
 
-        viewControllers = [homeNav, orderHistoryNav, chatListNav, myPageNav]
+        viewControllers = [homeNav, orderHistoryNav, communityNav, chatListNav, myPageNav]
     }
 }
