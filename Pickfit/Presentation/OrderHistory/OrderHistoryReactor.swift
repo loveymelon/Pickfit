@@ -25,6 +25,7 @@ final class OrderHistoryReactor: Reactor {
 
     enum Mutation {
         case setOrders([OrderHistoryEntity])
+        case setSections([OrderHistorySectionModel])
         case setLoading(Bool)
         case setError(String)
         case setSelectedOrder(OrderHistoryEntity?)
@@ -32,6 +33,7 @@ final class OrderHistoryReactor: Reactor {
 
     struct State {
         var orders: [OrderHistoryEntity] = []
+        var sections: [OrderHistorySectionModel] = []
         var isLoading: Bool = false
         var errorMessage: String?
         var selectedOrder: OrderHistoryEntity?
@@ -57,7 +59,11 @@ final class OrderHistoryReactor: Reactor {
         case .setOrders(let orders):
             print("📦 [OrderHistoryReactor] Setting orders: \(orders.count) items")
             newState.orders = orders
+            newState.sections = buildSections(from: orders)
             newState.isLoading = false
+
+        case .setSections(let sections):
+            newState.sections = sections
 
         case .setLoading(let isLoading):
             print("⏳ [OrderHistoryReactor] Loading: \(isLoading)")
@@ -78,6 +84,40 @@ final class OrderHistoryReactor: Reactor {
         }
 
         return newState
+    }
+
+    private func buildSections(from orders: [OrderHistoryEntity]) -> [OrderHistorySectionModel] {
+        var sections: [OrderHistorySectionModel] = []
+
+        // 1. Banner Section
+        sections.append(OrderHistorySectionModel(
+            model: .banner,
+            items: [.banner("픽핏과 함께 하는\n주문픽업을 더 편하게!")]
+        ))
+
+        // 2. Separate ongoing and history orders
+        let ongoingOrders = orders.filter { $0.currentOrderStatus != .pickedUp }
+        let historyOrders = orders.filter { $0.currentOrderStatus == .pickedUp }
+
+        // 3. Ongoing Section
+        if !ongoingOrders.isEmpty {
+            let ongoingItems = ongoingOrders.map { OrderHistorySectionItem.ongoingOrder($0) }
+            sections.append(OrderHistorySectionModel(
+                model: .ongoing(title: "주문현황"),
+                items: ongoingItems
+            ))
+        }
+
+        // 4. History Section
+        if !historyOrders.isEmpty {
+            let historyItems = historyOrders.map { OrderHistorySectionItem.historyOrder($0) }
+            sections.append(OrderHistorySectionModel(
+                model: .history(title: "이전 주문 내역"),
+                items: historyItems
+            ))
+        }
+
+        return sections
     }
 
     private func fetchOrders() -> Observable<Mutation> {
