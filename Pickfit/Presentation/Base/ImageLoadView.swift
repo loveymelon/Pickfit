@@ -83,6 +83,14 @@ final class ImageLoadView: UIView {
             return
         }
 
+        // 같은 URL이면 중복 로드 방지
+        if currentImageURL == urlString, imageView.image != nil {
+            return
+        }
+
+        // 이전 로딩 취소
+        imageView.kf.cancelDownloadTask()
+
         // 상대 경로인 경우 baseURL 추가
         let fullURLString: String
         if urlString.hasPrefix("http://") || urlString.hasPrefix("https://") {
@@ -148,6 +156,13 @@ final class ImageLoadView: UIView {
 
     @MainActor
     private func handleImageLoadError(_ error: KingfisherError, url: URL) {
+        // Source mismatch 에러는 무시 (이미지는 성공적으로 로드됨)
+        let errorDescription = error.localizedDescription
+        if errorDescription.contains("not the one currently expected") {
+            print("ℹ️ [Image] Source mismatch ignored (image loaded successfully)")
+            return
+        }
+
         // 419 에러인지 확인 (토큰 만료)
         if case .responseError(let reason) = error,
            case .invalidHTTPStatusCode(let response) = reason,
@@ -251,16 +266,17 @@ extension ImageLoadView: UIConfigureProtocol {
 
         errorStackView.snp.makeConstraints {
             $0.center.equalToSuperview()
-            $0.leading.trailing.equalToSuperview().inset(16)
+            $0.leading.greaterThanOrEqualToSuperview().offset(8)
+            $0.trailing.lessThanOrEqualToSuperview().offset(-8)
         }
 
         errorImageView.snp.makeConstraints {
-            $0.size.equalTo(40)
+            $0.size.equalTo(40).priority(.high)
         }
 
         retryButton.snp.makeConstraints {
-            $0.height.equalTo(32)
-            $0.width.equalTo(80)
+            $0.height.equalTo(32).priority(.high)
+            $0.width.equalTo(80).priority(.high)
         }
     }
 }
