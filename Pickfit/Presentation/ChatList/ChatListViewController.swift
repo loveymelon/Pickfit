@@ -18,10 +18,17 @@ final class ChatListViewController: BaseViewController<ChatListView> {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupNavigationBar()
+        setupPushNotificationObserver()
 
         print("📱 [ChatList] viewDidLoad called")
-        // 즉시 데이터 로드 트리거
         chatReactor.action.onNext(.viewDidLoad)
+    }
+
+    override func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        print("📱 [ChatList] viewIsAppearing - fetching latest chat list")
+        print("📱 [ChatList] Current reactor state - rooms: \(chatReactor.currentState.allChatRooms.count), loading: \(chatReactor.currentState.isLoading)")
+        chatReactor.action.onNext(.viewIsAppearing)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -37,6 +44,16 @@ final class ChatListViewController: BaseViewController<ChatListView> {
     private func setupNavigationBar() {
         // 네비게이션 바 숨김
         navigationController?.setNavigationBarHidden(true, animated: false)
+    }
+
+    private func setupPushNotificationObserver() {
+        // 채팅 푸시 알림 수신 시 목록 갱신
+        NotificationCenter.default.rx.notification(.chatPushReceived)
+            .subscribe(onNext: { [weak self] notification in
+                print("📬 [ChatList] Push notification received - refreshing chat list")
+                self?.chatReactor.action.onNext(.receivedPushNotification)
+            })
+            .disposed(by: disposeBag)
     }
 
     override func bind() {
@@ -80,8 +97,11 @@ final class ChatListViewController: BaseViewController<ChatListView> {
             .map { $0.filteredChatRooms }
             .do(onNext: { rooms in
                 print("🔄 [ChatList VC] Filtered chat rooms updated: \(rooms.count) items")
+                if let first = rooms.first {
+                    print("🔄 [ChatList VC] First room lastChat: \(first.lastChat?.content ?? "nil")")
+                }
             })
-            .distinctUntilChanged { $0.count == $1.count }
+            // distinctUntilChanged 제거 - 항상 최신 데이터로 업데이트
             .bind(to: mainView.tableView.rx.items(
                 cellIdentifier: ChatListCell.identifier,
                 cellType: ChatListCell.self

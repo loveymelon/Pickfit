@@ -19,7 +19,9 @@ final class ChatListReactor: Reactor {
 
     enum Action {
         case viewDidLoad
+        case viewIsAppearing
         case refresh
+        case receivedPushNotification
         case selectChatRoom(ChatRoomEntity)
         case changeFilter(ChatFilter)
     }
@@ -51,8 +53,24 @@ final class ChatListReactor: Reactor {
 
     func mutate(action: Action) -> Observable<Mutation> {
         print("⚡️ [ChatListReactor] Action received: \(action)")
+        print("⚡️ [ChatListReactor] Current state before action - rooms: \(currentState.allChatRooms.count), loading: \(currentState.isLoading)")
+
         switch action {
-        case .viewDidLoad, .refresh:
+        case .viewDidLoad:
+            // viewDidLoad는 한 번만 실행되므로 아무것도 하지 않음
+            print("⚡️ [ChatListReactor] viewDidLoad - returning empty")
+            return Observable.empty()
+
+        case .viewIsAppearing:
+            print("⚡️ [ChatListReactor] viewIsAppearing - calling fetchChatRooms()")
+            return fetchChatRooms()
+
+        case .refresh:
+            print("⚡️ [ChatListReactor] refresh - calling fetchChatRooms()")
+            return fetchChatRooms()
+
+        case .receivedPushNotification:
+            print("⚡️ [ChatListReactor] receivedPushNotification - calling fetchChatRooms()")
             return fetchChatRooms()
 
         case .selectChatRoom(let room):
@@ -115,12 +133,14 @@ final class ChatListReactor: Reactor {
     }
 
     private func fetchChatRooms() -> Observable<Mutation> {
-        print("📡 [ChatListReactor] Fetching from API")
+        print("📡 [ChatListReactor] fetchChatRooms() called - starting API fetch")
 
         return run(
             operation: { send in
+                print("📡 [ChatListReactor] Setting loading to true")
                 send(.setLoading(true))
 
+                print("📡 [ChatListReactor] Calling chatRepository.fetchChatRoomList()")
                 // 1. API로 채팅방 목록 조회
                 let apiRooms = try await self.chatRepository.fetchChatRoomList()
                 print("✅ [ChatListReactor] API returned \(apiRooms.count) chat rooms")
@@ -141,10 +161,12 @@ final class ChatListReactor: Reactor {
                     return updatedRoom
                 }
 
+                print("📡 [ChatListReactor] Sending setAllChatRooms with \(roomsWithUnread.count) rooms")
                 send(.setAllChatRooms(roomsWithUnread))
             },
             onError: { error in
                 print("❌ [ChatListReactor] API error: \(error)")
+                print("❌ [ChatListReactor] Error details: \(error.localizedDescription)")
                 return .setError(error.localizedDescription)
             }
         )

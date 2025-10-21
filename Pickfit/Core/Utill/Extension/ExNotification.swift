@@ -23,4 +23,8 @@ extension Notification.Name {
     /// 탭바 배지를 업데이트하라는 신호
     /// - userInfo: ["totalCount": Int]
     static let updateChatBadge = Notification.Name("updateChatBadge")
+
+    /// 채팅 푸시 알림을 수신했다는 신호 (채팅 목록 갱신 트리거용)
+    /// - userInfo: ["roomId": String] (optional)
+    static let chatPushReceived = Notification.Name("chatPushReceived")
 }
