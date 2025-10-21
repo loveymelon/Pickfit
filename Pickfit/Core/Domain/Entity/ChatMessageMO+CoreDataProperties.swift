@@ -15,7 +15,6 @@ extension Message {
     }
 
     @NSManaged public var chatId: String?
-    @NSManaged public var roomId: String?
     @NSManaged public var content: String?
     @NSManaged public var createdAt: String?
     @NSManaged public var updatedAt: String?
@@ -24,6 +23,9 @@ extension Message {
     @NSManaged public var senderProfileImage: String?
     @NSManaged public var filesJSON: String?
     @NSManaged public var isMyMessage: Bool
+
+    // Relationship
+    @NSManaged public var room: ChatRoom?
 
 }
 

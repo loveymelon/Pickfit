@@ -1,0 +1,14 @@
+//
+//  ChatRoom+CoreDataClass.swift
+//  Pickfit
+//
+//  Created by Claude on 10/21/25.
+//
+
+import Foundation
+import CoreData
+
+@objc(ChatRoom)
+public class ChatRoom: NSManagedObject {
+
+}
