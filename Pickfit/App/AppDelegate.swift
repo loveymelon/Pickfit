@@ -87,6 +87,14 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         let roomId = userInfo["room_id"] as? String ?? userInfo["roomId"] as? String
 
         if let roomId = roomId {
+            // ⭐ 채팅 목록 갱신 알림 발송 (채팅 목록 뷰가 자동으로 갱신됨)
+            NotificationCenter.default.post(
+                name: .chatPushReceived,
+                object: nil,
+                userInfo: ["roomId": roomId]
+            )
+            print("📬 [AppDelegate] Posted chatPushReceived notification for room: \(roomId)")
+
             // ⭐ 같은 방을 보고 있으면 알림 무시
             if ChatStateManager.shared.isRoomActive(roomId) {
                 print("🔕 [AppDelegate] Same room active, skip notification for room: \(roomId)")
@@ -100,7 +108,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
             print("📋 [AppDelegate] Title: \(content.title)")
             print("📋 [AppDelegate] Subtitle: \(content.subtitle ?? "nil")")
             print("📋 [AppDelegate] Body: \(content.body)")
-            
+
             // 서버가 보낸 알림 그대로 표시
             completionHandler([.banner, .sound, .badge, .list])
         } else {
