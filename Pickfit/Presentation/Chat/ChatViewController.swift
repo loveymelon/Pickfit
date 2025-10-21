@@ -42,37 +42,7 @@ final class ChatViewController: BaseViewController<ChatView>, View {
         // 즉시 초기 데이터 로드 및 소켓 연결 시작
         print("🚀 [ChatViewController] Triggering viewDidLoad action")
         chatReactor.action.onNext(.viewDidLoad)
-
-        // PDF 테스트 버튼 추가 (개발용)
-        #if DEBUG
-        addPDFTestButton()
-        #endif
     }
-
-    #if DEBUG
-    private func addPDFTestButton() {
-        let testButton = UIButton(type: .system)
-        testButton.setTitle("PDF 테스트", for: .normal)
-        testButton.backgroundColor = .systemBlue
-        testButton.setTitleColor(.white, for: .normal)
-        testButton.layer.cornerRadius = 8
-        testButton.addTarget(self, action: #selector(testPDFViewer), for: .touchUpInside)
-
-        view.addSubview(testButton)
-        testButton.snp.makeConstraints {
-            $0.top.equalTo(view.safeAreaLayoutGuide).offset(60)
-            $0.trailing.equalToSuperview().offset(-16)
-            $0.width.equalTo(100)
-            $0.height.equalTo(40)
-        }
-    }
-
-    @objc private func testPDFViewer() {
-        // 테스트용 공개 PDF URL (Apple 샘플 PDF)
-        let testPDFURL = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-        presentPDFViewer(urlString: testPDFURL)
-    }
-    #endif
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
