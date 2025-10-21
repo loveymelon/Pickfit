@@ -427,20 +427,14 @@ final class ChatReactor: Reactor {
         BadgeManager.shared.incrementUnreadCount(for: roomId)
         print("📊 [ChatReactor] Badge incremented for room: \(roomId)")
 
-        // 3. In-App Banner 알림 발송
-        // SceneDelegate가 앱 상태를 확인하여 포그라운드일 때만 배너 표시
+        // 3. 채팅 목록 갱신 알림 발송 (푸시 수신 시와 동일)
         DispatchQueue.main.async {
-            print("📱 [ChatReactor] Posting in-app notification event")
+            print("📱 [ChatReactor] Posting chat push received event for list refresh")
 
             NotificationCenter.default.post(
-                name: .showInAppNotification,
+                name: .chatPushReceived,
                 object: nil,
-                userInfo: [
-                    "roomId": message.roomId,
-                    "nickname": message.sender.nickname,
-                    "message": message.content,
-                    "profileImage": message.sender.profileImageUrl ?? ""
-                ]
+                userInfo: ["roomId": message.roomId]
             )
         }
     }

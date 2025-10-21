@@ -44,14 +44,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             object: nil
         )
 
-        // In-App Banner 표시 구독
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleShowInAppNotification(_:)),
-            name: .showInAppNotification,
-            object: nil
-        )
-
         // 채팅방 열기 구독 (푸시 알림 탭 시)
         NotificationCenter.default.addObserver(
             self,
@@ -65,54 +57,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let window = window else { return }
         window.rootViewController = LoginViewController()
         UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: nil)
-    }
-
-    /// In-App Banner 표시 (앱 실행 중 다른 화면에서 메시지 받았을 때)
-    @objc private func handleShowInAppNotification(_ notification: Notification) {
-        guard let window = window,
-              let userInfo = notification.userInfo,
-              let roomId = userInfo["roomId"] as? String,
-              let nickname = userInfo["nickname"] as? String,
-              let message = userInfo["message"] as? String else {
-            print("⚠️ [SceneDelegate] Invalid notification userInfo")
-            return
-        }
-
-        // ✅ 앱 상태 확인: 포그라운드일 때만 배너 표시
-        guard let scene = window.windowScene,
-              scene.activationState == .foregroundActive else {
-            print("🔕 [SceneDelegate] App is not in foreground, skipping banner")
-            return
-        }
-
-        let profileImage = userInfo["profileImage"] as? String
-        print("🔔 [SceneDelegate] Showing In-App Banner for \(nickname)")
-
-        // 메인 스레드에서 UI 업데이트
-        DispatchQueue.main.async {
-            // 기존 배너가 있으면 제거 (중복 방지)
-            window.subviews.compactMap { $0 as? InAppNotificationView }.forEach { $0.removeFromSuperview() }
-
-            // 새 배너 생성
-            let bannerView = InAppNotificationView()
-            window.addSubview(bannerView)
-
-            bannerView.snp.makeConstraints {
-                $0.top.equalTo(window.safeAreaLayoutGuide.snp.top)
-                $0.leading.trailing.equalToSuperview()
-                $0.height.equalTo(96)
-            }
-
-            // 배너 표시
-            bannerView.show(
-                nickname: nickname,
-                message: message,
-                profileImage: profileImage
-            ) { [weak self] in
-                // 배너 탭 시 해당 채팅방 열기
-                self?.openChatRoom(roomId: roomId)
-            }
-        }
     }
 
     /// 특정 채팅방 열기 (푸시 알림 탭 시 또는 In-App Banner 탭 시)
