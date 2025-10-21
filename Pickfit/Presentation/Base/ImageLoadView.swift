@@ -25,6 +25,7 @@ final class ImageLoadView: UIView {
         $0.backgroundColor = .systemGray6
         $0.layer.cornerRadius = 8
         $0.isHidden = true
+        $0.isUserInteractionEnabled = true
     }
 
     private let errorStackView = UIStackView().then {
@@ -54,6 +55,7 @@ final class ImageLoadView: UIView {
         $0.layer.cornerRadius = 6
         $0.layer.borderWidth = 1
         $0.layer.borderColor = UIColor.systemGray4.cgColor
+        $0.isUserInteractionEnabled = true
     }
 
     private var currentImageURL: String?
@@ -117,9 +119,7 @@ final class ImageLoadView: UIView {
     }
 
     @MainActor
-    private func loadImageWithToken(url: URL, accessToken: String?) {
-        let processor = DownsamplingImageProcessor(size: downsamplingSize)
-
+    private func loadImageWithToken(url: URL, accessToken: String?, retryWithoutDownsampling: Bool = false) {
         let modifier = AnyModifier { request in
             var modifiedRequest = request
             modifiedRequest.setValue(APIKey.sesacKey, forHTTPHeaderField: "SeSACKey")
@@ -131,16 +131,23 @@ final class ImageLoadView: UIView {
             return modifiedRequest
         }
 
+        var options: KingfisherOptionsInfo = [
+            .requestModifier(modifier),
+            .scaleFactor(UIScreen.main.scale),
+            .transition(.fade(0.2)),
+            .cacheOriginalImage
+        ]
+
+        // 다운샘플링 실패 시에는 원본 이미지 사용
+        if !retryWithoutDownsampling {
+            let processor = DownsamplingImageProcessor(size: downsamplingSize)
+            options.append(.processor(processor))
+        }
+
         imageView.kf.setImage(
             with: url,
             placeholder: nil,
-            options: [
-                .requestModifier(modifier),
-                .processor(processor),
-                .scaleFactor(UIScreen.main.scale),
-                .transition(.fade(0.2)),
-                .cacheOriginalImage
-            ],
+            options: options,
             completionHandler: { [weak self] result in
                 self?.loadingIndicator.stopAnimating()
 
@@ -148,7 +155,22 @@ final class ImageLoadView: UIView {
                 case .success:
                     self?.errorView.isHidden = true
                 case .failure(let error):
-                    self?.handleImageLoadError(error, url: url)
+                    // 프로세서 에러 처리
+                    if case .processorError = error {
+                        if !retryWithoutDownsampling {
+                            print("⚠️ [Image] Downsampling failed, retrying with original image")
+                            self?.loadImageWithToken(url: url, accessToken: accessToken, retryWithoutDownsampling: true)
+                        } else {
+                            print("❌ [Image] Original image processing also failed")
+                            // 이미지 처리 불가능 - 에러 표시하지 않고 플레이스홀더만 표시
+                            self?.errorView.isHidden = true
+                            self?.imageView.image = UIImage(systemName: "photo")
+                            self?.imageView.tintColor = .systemGray3
+                            self?.imageView.contentMode = .scaleAspectFit
+                        }
+                    } else {
+                        self?.handleImageLoadError(error, url: url)
+                    }
                 }
             }
         )
@@ -221,6 +243,14 @@ final class ImageLoadView: UIView {
 
     private func setupActions() {
         retryButton.addTarget(self, action: #selector(retryButtonTapped), for: .touchUpInside)
+
+        // errorView에 탭 제스처 추가 (셀 선택 이벤트 차단)
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(errorViewTapped))
+        errorView.addGestureRecognizer(tapGesture)
+    }
+
+    @objc private func errorViewTapped() {
+        // errorView가 탭되면 아무것도 하지 않음 (셀 선택 차단)
     }
 
     @objc private func retryButtonTapped() {
