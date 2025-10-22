@@ -56,7 +56,11 @@ final class ChatStorage {
 
             // 메시지 속성 설정 (업데이트 또는 생성 모두 동일)
             message.chatId = entity.chatId
-            message.roomId = entity.roomId
+
+            // ChatRoom과의 Relationship 설정
+            let chatRoom = ChatRoomStorage.shared.fetchOrCreateChatRoom(roomId: entity.roomId)
+            message.room = chatRoom
+
             message.content = entity.content
             message.createdAt = entity.createdAt
             message.updatedAt = entity.updatedAt
@@ -90,19 +94,18 @@ final class ChatStorage {
     /// 특정 채팅방의 모든 메시지 조회
     /// - Parameter roomId: 채팅방 ID
     /// - Returns: [ChatMessageEntity] (시간 순 정렬)
-    /// - Note: roomId에 index가 설정되어 있어 빠른 조회 가능
+    /// - Note: Relationship을 통한 빠른 조회
     func fetchMessages(roomId: String) -> [ChatMessageEntity] {
-        let fetchRequest: NSFetchRequest<Message> = Message.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "roomId == %@", roomId)
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: true)]
-
-        do {
-            let results = try context.fetch(fetchRequest)
-            return results.map { toEntity($0) }
-        } catch {
-            print("[ChatStorage] 메시지 조회 실패: \(error)")
+        // ChatRoom을 먼저 찾고, Relationship을 통해 메시지 조회
+        guard let chatRoom = ChatRoomStorage.shared.fetchChatRoom(roomId: roomId) else {
             return []
         }
+
+        // Relationship의 messages를 createdAt으로 정렬
+        let messages = (chatRoom.messages?.allObjects as? [Message]) ?? []
+        let sorted = messages.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+
+        return sorted.map { toEntity($0) }
     }
 
     /// 특정 채팅방의 최근 N개 메시지 조회 (Pagination - 초기 로드용)
@@ -112,19 +115,16 @@ final class ChatStorage {
     /// - Returns: [ChatMessageEntity] (시간 순 정렬, 최근 limit개)
     /// - Note: 역방향 pagination을 위해 최신 메시지부터 limit개만 조회
     func fetchRecentMessages(roomId: String, limit: Int = 30) -> [ChatMessageEntity] {
-        let fetchRequest: NSFetchRequest<Message> = Message.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "roomId == %@", roomId)
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]  // 최신순
-        fetchRequest.fetchLimit = limit
-
-        do {
-            let results = try context.fetch(fetchRequest)
-            // 다시 오래된 순으로 정렬하여 반환
-            return results.reversed().map { toEntity($0) }
-        } catch {
-            print("[ChatStorage] 최근 메시지 조회 실패: \(error)")
+        guard let chatRoom = ChatRoomStorage.shared.fetchChatRoom(roomId: roomId) else {
             return []
         }
+
+        // Relationship의 messages를 최신순으로 정렬 후 limit개만
+        let messages = (chatRoom.messages?.allObjects as? [Message]) ?? []
+        let sorted = messages.sorted { ($0.createdAt ?? "") > ($1.createdAt ?? "") }
+        let limited = Array(sorted.prefix(limit))
+
+        return limited.reversed().map { toEntity($0) }
     }
 
     /// 특정 날짜 이전의 N개 메시지 조회 (Pagination - 이전 페이지용)
@@ -135,23 +135,17 @@ final class ChatStorage {
     /// - Returns: [ChatMessageEntity] (시간 순 정렬)
     /// - Note: 역방향 pagination용, insertRows로 배열 앞에 추가됨
     func fetchMessagesBefore(roomId: String, beforeDate: String, limit: Int = 30) -> [ChatMessageEntity] {
-        let fetchRequest: NSFetchRequest<Message> = Message.fetchRequest()
-        fetchRequest.predicate = NSPredicate(
-            format: "roomId == %@ AND createdAt < %@",
-            roomId,
-            beforeDate
-        )
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]  // 최신순
-        fetchRequest.fetchLimit = limit
-
-        do {
-            let results = try context.fetch(fetchRequest)
-            // 다시 오래된 순으로 정렬하여 반환
-            return results.reversed().map { toEntity($0) }
-        } catch {
-            print("[ChatStorage] 이전 메시지 조회 실패: \(error)")
+        guard let chatRoom = ChatRoomStorage.shared.fetchChatRoom(roomId: roomId) else {
             return []
         }
+
+        // Relationship의 messages에서 beforeDate 이전 것만 필터링
+        let messages = (chatRoom.messages?.allObjects as? [Message]) ?? []
+        let filtered = messages.filter { ($0.createdAt ?? "") < beforeDate }
+        let sorted = filtered.sorted { ($0.createdAt ?? "") > ($1.createdAt ?? "") }
+        let limited = Array(sorted.prefix(limit))
+
+        return limited.reversed().map { toEntity($0) }
     }
 
     /// 특정 메시지 조회 (chatId로)
@@ -175,18 +169,15 @@ final class ChatStorage {
     /// - Parameter roomId: 채팅방 ID
     /// - Returns: chatId (마지막 메시지 ID)
     func fetchLastChatId(roomId: String) -> String? {
-        let fetchRequest: NSFetchRequest<Message> = Message.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "roomId == %@", roomId)
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
-        fetchRequest.fetchLimit = 1
-
-        do {
-            let results = try context.fetch(fetchRequest)
-            return results.first?.chatId
-        } catch {
-            print("[ChatStorage] 마지막 메시지 조회 실패: \(error)")
+        guard let chatRoom = ChatRoomStorage.shared.fetchChatRoom(roomId: roomId) else {
             return nil
         }
+
+        // Relationship의 messages에서 가장 최신 메시지 찾기
+        let messages = (chatRoom.messages?.allObjects as? [Message]) ?? []
+        let sorted = messages.sorted { ($0.createdAt ?? "") > ($1.createdAt ?? "") }
+
+        return sorted.first?.chatId
     }
 
     /// 특정 채팅방의 마지막 메시지 날짜 조회 (API next 파라미터용)
@@ -194,18 +185,44 @@ final class ChatStorage {
     /// - Returns: createdAt (마지막 메시지 날짜)
     /// - Note: API 호출 시 next 파라미터로 전달하여 해당 날짜 이후의 메시지만 조회
     func fetchLastMessageDate(roomId: String) -> String? {
-        let fetchRequest: NSFetchRequest<Message> = Message.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "roomId == %@", roomId)
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
-        fetchRequest.fetchLimit = 1
-
-        do {
-            let results = try context.fetch(fetchRequest)
-            return results.first?.createdAt
-        } catch {
-            print("[ChatStorage] 마지막 메시지 날짜 조회 실패: \(error)")
+        guard let chatRoom = ChatRoomStorage.shared.fetchChatRoom(roomId: roomId) else {
             return nil
         }
+
+        // Relationship의 messages에서 가장 최신 메시지의 날짜 찾기
+        let messages = (chatRoom.messages?.allObjects as? [Message]) ?? []
+        let sorted = messages.sorted { ($0.createdAt ?? "") > ($1.createdAt ?? "") }
+
+        return sorted.first?.createdAt
+    }
+
+    // MARK: - Unread Count
+
+    /// lastReadChatId 이후의 안읽은 메시지 개수 계산
+    /// - Parameters:
+    ///   - roomId: 채팅방 ID
+    ///   - afterChatId: 마지막으로 읽은 메시지 ID
+    /// - Returns: 안읽은 메시지 개수
+    func countMessagesAfter(roomId: String, afterChatId: String) -> Int {
+        // 1. lastReadChatId의 createdAt 조회
+        guard let lastReadMessage = fetchMessage(chatId: afterChatId) else {
+            print("⚠️ [ChatStorage] lastReadChatId not found: \(afterChatId)")
+            return 0
+        }
+
+        let lastReadDate = lastReadMessage.createdAt
+
+        // 2. ChatRoom의 messages에서 lastReadDate 이후 메시지 개수 계산
+        guard let chatRoom = ChatRoomStorage.shared.fetchChatRoom(roomId: roomId) else {
+            return 0
+        }
+
+        let messages = (chatRoom.messages?.allObjects as? [Message]) ?? []
+        let unreadMessages = messages.filter { ($0.createdAt ?? "") > lastReadDate }
+        let count = unreadMessages.count
+
+        print("📊 [ChatStorage] Unread count for \(roomId): \(count)")
+        return count
     }
 
     // MARK: - Delete Messages
@@ -213,35 +230,20 @@ final class ChatStorage {
     /// 특정 채팅방의 모든 메시지 삭제
     /// - Parameter roomId: 채팅방 ID
     /// - Warning: CoreData에서 삭제하면 CloudKit에도 삭제가 전파됨 (모든 기기에서 삭제)
+    /// - Note: ChatRoom을 삭제하면 Cascade Delete로 메시지도 자동 삭제됨
     func deleteMessages(roomId: String) {
-        let fetchRequest: NSFetchRequest<Message> = Message.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "roomId == %@", roomId)
-
-        do {
-            let results = try context.fetch(fetchRequest)
-            for mo in results {
-                context.delete(mo)
-            }
-            CoreDataManager.shared.saveContext()
-            print("[ChatStorage] 채팅방 메시지 삭제: \(roomId)")
-        } catch {
-            print("[ChatStorage] 메시지 삭제 실패: \(error)")
-        }
+        // ChatRoom 삭제 시 Cascade Delete로 메시지도 자동 삭제됨
+        ChatRoomStorage.shared.deleteChatRoom(roomId: roomId)
+        print("[ChatStorage] 채팅방 메시지 삭제 (Cascade): \(roomId)")
     }
 
     /// 모든 메시지 삭제
     /// - Warning: CoreData에서 삭제하면 CloudKit에도 삭제가 전파됨 (모든 기기에서 삭제)
+    /// - Note: 모든 ChatRoom을 삭제하면 Cascade Delete로 메시지도 자동 삭제됨
     func deleteAllMessages() {
-        let fetchRequest: NSFetchRequest<NSFetchRequestResult> = Message.fetchRequest()
-        let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
-
-        do {
-            try context.execute(deleteRequest)
-            CoreDataManager.shared.saveContext()
-            print("[ChatStorage] 모든 메시지 삭제 완료")
-        } catch {
-            print("[ChatStorage] 메시지 삭제 실패: \(error)")
-        }
+        // 모든 ChatRoom 삭제 → Cascade Delete로 메시지도 자동 삭제
+        ChatRoomStorage.shared.deleteAllChatRooms()
+        print("[ChatStorage] 모든 메시지 삭제 완료 (Cascade)")
     }
 
     // MARK: - ManagedObject → Entity 변환
@@ -255,9 +257,12 @@ final class ChatStorage {
             files = (try? JSONDecoder().decode([String].self, from: data)) ?? []
         }
 
+        // Relationship을 통해 roomId 가져오기
+        let roomId = mo.room?.roomId ?? ""
+
         return ChatMessageEntity(
             chatId: mo.chatId ?? "",
-            roomId: mo.roomId ?? "",
+            roomId: roomId,
             content: mo.content ?? "",
             createdAt: mo.createdAt ?? "",
             updatedAt: mo.updatedAt ?? "",

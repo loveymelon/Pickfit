@@ -22,22 +22,63 @@ final class BadgeManager {
     private var unreadCounts: [String: Int] = [:]
 
     private init() {
-        print("📊 [BadgeManager] Initialized")
+        // TODO: 탭바 배지 복원 기능 (일단 주석처리)
+        // DispatchQueue.main.async { [weak self] in
+        //     self?.restoreFromAppIconBadge()
+        // }
     }
+
+    /// 앱 아이콘 배지에서 총 개수 복원
+    /// - Note: 앱 실행 시 호출되며, 앱이 꺼져 있을 때의 배지 개수를 탭바에 반영
+    // @MainActor
+    // private func restoreFromAppIconBadge() {
+    //     let savedBadgeCount = UIApplication.shared.applicationIconBadgeNumber
+    //
+    //     if savedBadgeCount > 0 {
+    //         // 임시로 전체 카운트를 저장 (특정 roomId 없이)
+    //         unreadCounts["__total__"] = savedBadgeCount
+    //
+    //         // 탭바 배지 즉시 업데이트
+    //         notifyBadgeUpdate()
+    //     }
+    // }
 
     // MARK: - Public Methods
 
-    /// 특정 채팅방의 읽지 않은 메시지 개수 증가
-    /// - Parameter roomId: 메시지를 받은 채팅방 ID
-    func incrementUnreadCount(for roomId: String) {
-        let currentCount = unreadCounts[roomId] ?? 0
-        unreadCounts[roomId] = currentCount + 1
+    /// 특정 채팅방의 읽지 않은 메시지 개수 설정 (초기 로드 시)
+    /// - Parameters:
+    ///   - roomId: 채팅방 ID
+    ///   - count: 설정할 개수
+    func setUnreadCount(for roomId: String, count: Int) {
+        let oldCount = unreadCounts[roomId] ?? 0
+        unreadCounts[roomId] = count
 
-        print("📊 [BadgeManager] Incremented unread count for \(roomId): \(currentCount) → \(currentCount + 1)")
+        // __total__도 차이만큼 조정
+        let diff = count - oldCount
+        let totalCount = unreadCounts["__total__"] ?? 0
+        unreadCounts["__total__"] = max(0, totalCount + diff)
 
         // 배지 자동 업데이트
         updateAppBadge()
         notifyBadgeUpdate()
+    }
+
+    /// 특정 채팅방의 읽지 않은 메시지 개수 증가 (푸시 알림 시)
+    /// - Parameter roomId: 메시지를 받은 채팅방 ID
+    func incrementUnreadCount(for roomId: String) {
+        // 개별 방 카운트 증가
+        let currentCount = unreadCounts[roomId] ?? 0
+        unreadCounts[roomId] = currentCount + 1
+
+        // __total__ 카운트도 증가
+        let totalCount = unreadCounts["__total__"] ?? 0
+        unreadCounts["__total__"] = totalCount + 1
+
+        // 배지 자동 업데이트
+        updateAppBadge()
+        notifyBadgeUpdate()
+
+        print("📊 [BadgeManager] Incremented \(roomId): \(currentCount) → \(currentCount + 1)")
     }
 
     /// 특정 채팅방의 읽지 않은 메시지 개수 초기화
@@ -48,7 +89,10 @@ final class BadgeManager {
 
         if previousCount > 0 {
             unreadCounts[roomId] = 0
-            print("📊 [BadgeManager] Cleared unread count for \(roomId): \(previousCount) → 0")
+
+            // __total__에서도 해당 방의 카운트 빼기
+            let totalCount = unreadCounts["__total__"] ?? 0
+            unreadCounts["__total__"] = max(0, totalCount - previousCount)
 
             // 배지 자동 업데이트
             updateAppBadge()
@@ -59,9 +103,8 @@ final class BadgeManager {
     /// 전체 읽지 않은 메시지 개수 조회
     /// - Returns: 모든 채팅방의 읽지 않은 메시지 총합
     func getTotalUnreadCount() -> Int {
-        let total = unreadCounts.values.reduce(0, +)
-        print("📊 [BadgeManager] Total unread count: \(total)")
-        return total
+        // __total__ 키에서 직접 읽기 (앱 아이콘 배지 복원 포함)
+        return unreadCounts["__total__"] ?? 0
     }
 
     /// 특정 채팅방의 읽지 않은 메시지 개수 조회
@@ -75,7 +118,6 @@ final class BadgeManager {
     /// - Note: 로그아웃 시 호출됨
     func clearAllUnreadCounts() {
         unreadCounts.removeAll()
-        print("📊 [BadgeManager] All unread counts cleared")
 
         // 배지 자동 업데이트
         updateAppBadge()
@@ -89,7 +131,6 @@ final class BadgeManager {
 
         DispatchQueue.main.async {
             UIApplication.shared.applicationIconBadgeNumber = totalCount
-            print("📊 [BadgeManager] App icon badge updated: \(totalCount)")
         }
     }
 

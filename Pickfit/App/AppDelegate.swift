@@ -87,6 +87,17 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         let roomId = userInfo["room_id"] as? String ?? userInfo["roomId"] as? String
 
         if let roomId = roomId {
+            // ⭐ 같은 방을 보고 있으면 알림 무시
+            if ChatStateManager.shared.isRoomActive(roomId) {
+                print("🔕 [AppDelegate] Same room active, skip notification for room: \(roomId)")
+                completionHandler([])  // 알림 표시 안 함
+                return
+            }
+
+            // ⭐ 배지 개수 증가 (같은 방을 보고 있지 않을 때만)
+            BadgeManager.shared.incrementUnreadCount(for: roomId)
+            print("📊 [AppDelegate] Badge incremented for room: \(roomId)")
+
             // ⭐ 채팅 목록 갱신 알림 발송 (채팅 목록 뷰가 자동으로 갱신됨)
             NotificationCenter.default.post(
                 name: .chatPushReceived,
@@ -94,13 +105,6 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                 userInfo: ["roomId": roomId]
             )
             print("📬 [AppDelegate] Posted chatPushReceived notification for room: \(roomId)")
-
-            // ⭐ 같은 방을 보고 있으면 알림 무시
-            if ChatStateManager.shared.isRoomActive(roomId) {
-                print("🔕 [AppDelegate] Same room active, skip notification for room: \(roomId)")
-                completionHandler([])  // 알림 표시 안 함
-                return
-            }
 
             print("🔔 [AppDelegate] Chat message push - showing notification for room: \(roomId)")
 
@@ -136,6 +140,10 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
 
         if let roomId = roomId {
             print("📱 [AppDelegate] Opening chat room: \(roomId)")
+
+            // ⚠️ 주의: 배지 증가는 willPresent에서만 하고 여기서는 안 함!
+            // 이유: Foreground에서 받은 푸시는 이미 willPresent에서 증가했음
+            // Background에서 받은 푸시는 OS가 자동으로 배지 증가함
 
             // SceneDelegate에게 "이 채팅방 열어줘" 신호 보내기
             NotificationCenter.default.post(
