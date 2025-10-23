@@ -14,14 +14,21 @@ final class ChatListViewController: BaseViewController<ChatListView> {
 
     private let chatReactor = ChatListReactor()
     private let disposeBag = DisposeBag()
+    private var isInitialLoad = true  // 처음 로드인지 판단
 
     override func viewDidLoad() {
         super.viewDidLoad()
         setupNavigationBar()
         setupPushNotificationObserver()
+        setupPrefetching()
 
         print("📱 [ChatList] viewDidLoad called")
         chatReactor.action.onNext(.viewDidLoad)
+    }
+
+    private func setupPrefetching() {
+        // UITableView Prefetching 활성화 (화면에 보이는 cell + 여유분 자동 관리)
+        mainView.tableView.prefetchDataSource = self
     }
 
     override func viewIsAppearing(_ animated: Bool) {
@@ -49,8 +56,12 @@ final class ChatListViewController: BaseViewController<ChatListView> {
     private func setupPushNotificationObserver() {
         // 채팅 푸시 알림 수신 시 목록 갱신
         NotificationCenter.default.rx.notification(.chatPushReceived)
+            .take(until: self.rx.deallocated)  // VC가 해제될 때까지만
             .subscribe(onNext: { [weak self] notification in
                 print("📬 [ChatList] Push notification received - refreshing chat list")
+                if let roomId = notification.userInfo?["roomId"] as? String {
+                    print("📬 [ChatList] RoomId from push: \(roomId)")
+                }
                 self?.chatReactor.action.onNext(.receivedPushNotification)
             })
             .disposed(by: disposeBag)
@@ -105,9 +116,17 @@ final class ChatListViewController: BaseViewController<ChatListView> {
             .bind(to: mainView.tableView.rx.items(
                 cellIdentifier: ChatListCell.identifier,
                 cellType: ChatListCell.self
-            )) { index, chatRoom, cell in
-                print("🔄 [ChatList VC] Configuring cell \(index): \(chatRoom.roomId)")
-                cell.configure(with: chatRoom)
+            )) { [weak self] index, chatRoom, cell in
+                guard let self = self else { return }
+                print("🔄 [ChatList VC] Configuring cell \(index): \(chatRoom.roomId), isInitialLoad: \(self.isInitialLoad)")
+                cell.configure(with: chatRoom, isInitialLoad: self.isInitialLoad)
+
+                // 첫 로드 후에는 false로 설정
+                if self.isInitialLoad && index == 0 {
+                    DispatchQueue.main.async {
+                        self.isInitialLoad = false
+                    }
+                }
             }
             .disposed(by: disposeBag)
 
@@ -195,5 +214,21 @@ final class ChatListViewController: BaseViewController<ChatListView> {
         let alert = UIAlertController(title: "알림", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "확인", style: .default))
         present(alert, animated: true)
+    }
+}
+
+// MARK: - UITableViewDataSourcePrefetching
+extension ChatListViewController: UITableViewDataSourcePrefetching {
+    /// 화면에 보이기 전 미리 데이터 준비 (스크롤 성능 향상)
+    /// - Note: UITableView가 자동으로 화면에 보이는 cell + 여유분을 prefetch함
+    func tableView(_ tableView: UITableView, prefetchRowsAt indexPaths: [IndexPath]) {
+        // Prefetch는 안읽은 개수 API 호출에 사용되지 않음
+        // Cell의 configure()에서 필요시 자동으로 API 호출됨
+        // 이 메서드는 미래 확장을 위해 남겨둠
+    }
+
+    /// Prefetch 취소 (스크롤 방향이 바뀌어서 필요 없어진 경우)
+    func tableView(_ tableView: UITableView, cancelPrefetchingForRowsAt indexPaths: [IndexPath]) {
+        // 필요시 구현
     }
 }

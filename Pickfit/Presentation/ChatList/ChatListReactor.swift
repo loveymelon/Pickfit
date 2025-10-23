@@ -162,6 +162,10 @@ final class ChatListReactor: Reactor {
                 }
 
                 print("📡 [ChatListReactor] Sending setAllChatRooms with \(roomsWithUnread.count) rooms")
+
+                // 디버깅: BadgeManager 상태 출력
+                BadgeManager.shared.printStatus()
+
                 send(.setAllChatRooms(roomsWithUnread))
             },
             onError: { error in

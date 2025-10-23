@@ -10,14 +10,14 @@ import RxSwift
 
 final class ChatReactor: Reactor {
 
-    private let chatRepository: ChatRepository
+    private let chatRepository: ChatRepositoryProtocol
     private let roomId: String
 
     // 임시 큐: 초기 로딩 중 소켓 메시지 저장
     private var pendingSocketMessages: [ChatMessageEntity] = []
     private var isInitialLoadComplete: Bool = false
 
-    init(roomId: String, chatRepository: ChatRepository = ChatRepository()) {
+    init(roomId: String, chatRepository: ChatRepositoryProtocol = ChatRepository()) {
         self.roomId = roomId
         self.chatRepository = chatRepository
     }
@@ -110,12 +110,26 @@ final class ChatReactor: Reactor {
         switch mutation {
         case .setMessages(let messages):
             print("🔄 [Reduce] setMessages: \(messages.count) messages")
-            newState.messages = messages
+            // 중복 메시지 방지: 기존 메시지와 새 메시지를 병합 (chatId 기준)
+            var mergedMessages = newState.messages
+            for message in messages {
+                if !mergedMessages.contains(where: { $0.chatId == message.chatId }) {
+                    mergedMessages.append(message)
+                } else {
+                    print("⚠️ [Reduce] Duplicate message in setMessages ignored: \(message.chatId)")
+                }
+            }
+            newState.messages = mergedMessages
             newState.isLoading = false
 
         case .appendMessage(let message):
             print("🔄 [Reduce] appendMessage: \(message.content)")
-            newState.messages.append(message)
+            // 중복 메시지 방지: chatId로 중복 체크
+            if !newState.messages.contains(where: { $0.chatId == message.chatId }) {
+                newState.messages.append(message)
+            } else {
+                print("⚠️ [Reduce] Duplicate message ignored: \(message.chatId)")
+            }
 
         case .appendMessages(let messages):
             print("🔄 [Reduce] appendMessages: \(messages.count) messages")
@@ -154,8 +168,14 @@ final class ChatReactor: Reactor {
 
         case .flushPendingMessages(let messages):
             print("🔄 [Reduce] flushPendingMessages: \(messages.count) messages")
-            // 임시 큐의 메시지들을 한 번에 추가
-            newState.messages.append(contentsOf: messages)
+            // 임시 큐의 메시지들을 한 번에 추가 (중복 체크)
+            for message in messages {
+                if !newState.messages.contains(where: { $0.chatId == message.chatId }) {
+                    newState.messages.append(message)
+                } else {
+                    print("⚠️ [Reduce] Duplicate message in flushPending ignored: \(message.chatId)")
+                }
+            }
 
         // 이미지 선택 관련
         case .setSelectedImages(let imageDataList):
@@ -220,7 +240,7 @@ final class ChatReactor: Reactor {
                 } else {
                     // CoreData에 데이터가 없으면 REST API로 전체 메시지 조회
                     print("📥 [ChatReactor] No cached messages, fetching all from API...")
-                    let messages = try await self.chatRepository.fetchChatHistory(roomId: self.roomId)
+                    let messages = try await self.chatRepository.fetchChatHistory(roomId: self.roomId, next: nil)
                     print("✅ [ChatReactor] Loaded \(messages.count) messages from API")
 
                     // API로 받은 메시지를 CoreData에 저장
@@ -423,9 +443,10 @@ final class ChatReactor: Reactor {
             return
         }
 
-        // 2. 배지 개수 증가
-        BadgeManager.shared.incrementUnreadCount(for: roomId)
-        print("📊 [ChatReactor] Badge incremented for room: \(roomId)")
+        // 2. ⚠️ Socket 메시지는 배지 증가 안 함!
+        // 이유: Firebase Push에서 같은 메시지에 대해 배지 증가함 (중복 방지)
+        // BadgeManager.shared.incrementUnreadCount(for: roomId)
+        print("📊 [ChatReactor] Socket message - badge will be incremented by push notification")
 
         // 3. 채팅 목록 갱신 알림 발송 (푸시 수신 시와 동일)
         DispatchQueue.main.async {

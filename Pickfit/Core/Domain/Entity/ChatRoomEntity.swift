@@ -16,7 +16,7 @@ struct ChatRoomEntity {
     var isUnread: Bool = false  // 안읽음 여부 (CoreData와 비교하여 계산)
 }
 
-struct ChatParticipantEntity {
+struct ChatParticipantEntity: Codable {
     let userId: String
     let nick: String
     let profileImage: String?

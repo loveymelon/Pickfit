@@ -71,6 +71,15 @@ final class ChatViewController: BaseViewController<ChatView>, View {
         navigationController?.setNavigationBarHidden(false, animated: false)
         tabBarController?.tabBar.isHidden = false
 
+        // ✅ 마지막 메시지 ID 저장 (안읽은 개수 계산용)
+        if let lastMessageId = ChatStorage.shared.fetchLastChatId(roomId: roomInfo.roomId) {
+            ChatRoomStorage.shared.updateLastReadChatId(
+                roomId: roomInfo.roomId,
+                lastReadChatId: lastMessageId
+            )
+            print("📝 [ChatViewController] Saved lastReadChatId: \(lastMessageId) for room: \(roomInfo.roomId)")
+        }
+
         // ✅ 중요: 채팅방을 나갈 때 "활성 방" 해제
         // 이제부터 이 방의 메시지는 알림이 표시됨
         ChatStateManager.shared.clearActiveRoom()
