@@ -7,7 +7,7 @@
 
 import Foundation
 
-final class ChatRepository {
+final class ChatRepository: ChatRepositoryProtocol {
 
     // MARK: - REST API
 

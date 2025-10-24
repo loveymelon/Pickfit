@@ -11,9 +11,6 @@
 		DF2D6CF02E8A5F5B0045152C /* KeychainSwift in Frameworks */ = {isa = PBXBuildFile; productRef = DF2D6CEF2E8A5F5B0045152C /* KeychainSwift */; };
 		DF2D6CF32E8A5F660045152C /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = DF2D6CF22E8A5F660045152C /* Kingfisher */; };
 		DF2D6CF62E8A5F710045152C /* ReactorKit in Frameworks */ = {isa = PBXBuildFile; productRef = DF2D6CF52E8A5F710045152C /* ReactorKit */; };
-		DF2D6CF92E8A5F880045152C /* RxCocoa in Frameworks */ = {isa = PBXBuildFile; productRef = DF2D6CF82E8A5F880045152C /* RxCocoa */; };
-		DF2D6CFB2E8A5F880045152C /* RxRelay in Frameworks */ = {isa = PBXBuildFile; productRef = DF2D6CFA2E8A5F880045152C /* RxRelay */; };
-		DF2D6CFD2E8A5F880045152C /* RxSwift in Frameworks */ = {isa = PBXBuildFile; productRef = DF2D6CFC2E8A5F880045152C /* RxSwift */; };
 		DF2D6D002E8A5F950045152C /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = DF2D6CFF2E8A5F950045152C /* SnapKit */; };
 		DF2D6D032E8A5FA20045152C /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = DF2D6D022E8A5FA20045152C /* Alamofire */; };
 		DF2D6D062E8A5FAB0045152C /* Then in Frameworks */ = {isa = PBXBuildFile; productRef = DF2D6D052E8A5FAB0045152C /* Then */; };
@@ -27,11 +24,26 @@
 		DFCD322C2E9DE9090092BEE9 /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = DFCD322B2E9DE9090092BEE9 /* FirebaseAnalyticsCore */; };
 		DFCD322E2E9DE9090092BEE9 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = DFCD322D2E9DE9090092BEE9 /* FirebaseCrashlytics */; };
 		DFCD32302E9DE9090092BEE9 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = DFCD322F2E9DE9090092BEE9 /* FirebaseMessaging */; };
+		DFD338DF2EA8B91A00E0A522 /* RxCocoa in Frameworks */ = {isa = PBXBuildFile; productRef = DFD338DE2EA8B91A00E0A522 /* RxCocoa */; };
+		DFD338E12EA8B91A00E0A522 /* RxRelay in Frameworks */ = {isa = PBXBuildFile; productRef = DFD338E02EA8B91A00E0A522 /* RxRelay */; };
+		DFD338E32EA8B91A00E0A522 /* RxSwift in Frameworks */ = {isa = PBXBuildFile; productRef = DFD338E22EA8B91A00E0A522 /* RxSwift */; };
+		DFD338E52EA8B91A00E0A522 /* RxTest in Frameworks */ = {isa = PBXBuildFile; productRef = DFD338E42EA8B91A00E0A522 /* RxTest */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		DFD338CD2EA8B6CD00E0A522 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DF2D6C172E8A57AF0045152C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DF2D6C1E2E8A57AF0045152C;
+			remoteInfo = Pickfit;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		DF2D6C1F2E8A57AF0045152C /* Pickfit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pickfit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DF2D6C372E8A58D10045152C /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		DFD338C92EA8B6CD00E0A522 /* PickfitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PickfitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -53,6 +65,11 @@
 			path = Pickfit;
 			sourceTree = "<group>";
 		};
+		DFD338CA2EA8B6CD00E0A522 /* PickfitTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = PickfitTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,25 +77,33 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DF2D6CFB2E8A5F880045152C /* RxRelay in Frameworks */,
+				DFD338E12EA8B91A00E0A522 /* RxRelay in Frameworks */,
 				DF9715EF2E90349F004FF049 /* Differentiator in Frameworks */,
 				DF2D6D1D2E8A674B0045152C /* KakaoSDKCommon in Frameworks */,
+				DFD338E32EA8B91A00E0A522 /* RxSwift in Frameworks */,
 				DF2D6D062E8A5FAB0045152C /* Then in Frameworks */,
 				DF2D6D032E8A5FA20045152C /* Alamofire in Frameworks */,
 				DF2D6D002E8A5F950045152C /* SnapKit in Frameworks */,
 				DF2D6CF32E8A5F660045152C /* Kingfisher in Frameworks */,
 				DF2D6CF02E8A5F5B0045152C /* KeychainSwift in Frameworks */,
 				DFCD32302E9DE9090092BEE9 /* FirebaseMessaging in Frameworks */,
-				DF2D6CF92E8A5F880045152C /* RxCocoa in Frameworks */,
 				DF2D6D1F2E8A674B0045152C /* KakaoSDKUser in Frameworks */,
+				DFD338DF2EA8B91A00E0A522 /* RxCocoa in Frameworks */,
 				DF2D6CF62E8A5F710045152C /* ReactorKit in Frameworks */,
 				DF9715F12E90349F004FF049 /* RxDataSources in Frameworks */,
-				DF2D6CFD2E8A5F880045152C /* RxSwift in Frameworks */,
 				DFCD322C2E9DE9090092BEE9 /* FirebaseAnalyticsCore in Frameworks */,
 				DF2D6D1B2E8A674B0045152C /* KakaoSDKAuth in Frameworks */,
 				DFCD322E2E9DE9090092BEE9 /* FirebaseCrashlytics in Frameworks */,
 				DF588F032E97BBCD009C58AA /* iamport-ios in Frameworks */,
 				DFA1B0012E9A000000000001 /* SocketIO in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DFD338C62EA8B6CD00E0A522 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DFD338E52EA8B91A00E0A522 /* RxTest in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -90,6 +115,7 @@
 			children = (
 				DF2D6C372E8A58D10045152C /* .gitignore */,
 				DF2D6C212E8A57AF0045152C /* Pickfit */,
+				DFD338CA2EA8B6CD00E0A522 /* PickfitTests */,
 				DF2D6C202E8A57AF0045152C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -98,6 +124,7 @@
 			isa = PBXGroup;
 			children = (
 				DF2D6C1F2E8A57AF0045152C /* Pickfit.app */,
+				DFD338C92EA8B6CD00E0A522 /* PickfitTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -125,9 +152,6 @@
 				DF2D6CEF2E8A5F5B0045152C /* KeychainSwift */,
 				DF2D6CF22E8A5F660045152C /* Kingfisher */,
 				DF2D6CF52E8A5F710045152C /* ReactorKit */,
-				DF2D6CF82E8A5F880045152C /* RxCocoa */,
-				DF2D6CFA2E8A5F880045152C /* RxRelay */,
-				DF2D6CFC2E8A5F880045152C /* RxSwift */,
 				DF2D6CFF2E8A5F950045152C /* SnapKit */,
 				DF2D6D022E8A5FA20045152C /* Alamofire */,
 				DF2D6D052E8A5FAB0045152C /* Then */,
@@ -141,10 +165,37 @@
 				DFCD322B2E9DE9090092BEE9 /* FirebaseAnalyticsCore */,
 				DFCD322D2E9DE9090092BEE9 /* FirebaseCrashlytics */,
 				DFCD322F2E9DE9090092BEE9 /* FirebaseMessaging */,
+				DFD338DE2EA8B91A00E0A522 /* RxCocoa */,
+				DFD338E02EA8B91A00E0A522 /* RxRelay */,
+				DFD338E22EA8B91A00E0A522 /* RxSwift */,
 			);
 			productName = Pickfit;
 			productReference = DF2D6C1F2E8A57AF0045152C /* Pickfit.app */;
 			productType = "com.apple.product-type.application";
+		};
+		DFD338C82EA8B6CD00E0A522 /* PickfitTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DFD338D12EA8B6CD00E0A522 /* Build configuration list for PBXNativeTarget "PickfitTests" */;
+			buildPhases = (
+				DFD338C52EA8B6CD00E0A522 /* Sources */,
+				DFD338C62EA8B6CD00E0A522 /* Frameworks */,
+				DFD338C72EA8B6CD00E0A522 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DFD338CE2EA8B6CD00E0A522 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DFD338CA2EA8B6CD00E0A522 /* PickfitTests */,
+			);
+			name = PickfitTests;
+			packageProductDependencies = (
+				DFD338E42EA8B91A00E0A522 /* RxTest */,
+			);
+			productName = PickfitTests;
+			productReference = DFD338C92EA8B6CD00E0A522 /* PickfitTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -158,6 +209,10 @@
 				TargetAttributes = {
 					DF2D6C1E2E8A57AF0045152C = {
 						CreatedOnToolsVersion = 16.0;
+					};
+					DFD338C82EA8B6CD00E0A522 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = DF2D6C1E2E8A57AF0045152C;
 					};
 				};
 			};
@@ -174,7 +229,6 @@
 				DF2D6CEE2E8A5F5B0045152C /* XCRemoteSwiftPackageReference "keychain-swift" */,
 				DF2D6CF12E8A5F660045152C /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				DF2D6CF42E8A5F710045152C /* XCRemoteSwiftPackageReference "ReactorKit" */,
-				DF2D6CF72E8A5F880045152C /* XCRemoteSwiftPackageReference "RxSwift" */,
 				DF2D6CFE2E8A5F950045152C /* XCRemoteSwiftPackageReference "SnapKit" */,
 				DF2D6D012E8A5FA20045152C /* XCRemoteSwiftPackageReference "Alamofire" */,
 				DF2D6D042E8A5FAB0045152C /* XCRemoteSwiftPackageReference "Then" */,
@@ -183,6 +237,7 @@
 				DF588F012E97BBCD009C58AA /* XCRemoteSwiftPackageReference "iamport-ios" */,
 				DFA1AFFF2E9A000000000001 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */,
 				DFCD322A2E9DE9090092BEE9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				DFD338DD2EA8B91A00E0A522 /* XCRemoteSwiftPackageReference "RxSwift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DF2D6C202E8A57AF0045152C /* Products */;
@@ -190,6 +245,7 @@
 			projectRoot = "";
 			targets = (
 				DF2D6C1E2E8A57AF0045152C /* Pickfit */,
+				DFD338C82EA8B6CD00E0A522 /* PickfitTests */,
 			);
 		};
 /* End PBXProject section */
@@ -203,6 +259,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DFD338C72EA8B6CD00E0A522 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -213,7 +276,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DFD338C52EA8B6CD00E0A522 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DFD338CE2EA8B6CD00E0A522 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DF2D6C1E2E8A57AF0045152C /* Pickfit */;
+			targetProxy = DFD338CD2EA8B6CD00E0A522 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		DF2D6C332E8A57B10045152C /* Debug */ = {
@@ -403,6 +481,42 @@
 			};
 			name = Release;
 		};
+		DFD338CF2EA8B6CD00E0A522 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QQ67S8HZ4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = melon.PickfitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pickfit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Pickfit";
+			};
+			name = Debug;
+		};
+		DFD338D02EA8B6CD00E0A522 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = QQ67S8HZ4F;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = melon.PickfitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Pickfit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Pickfit";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -420,6 +534,15 @@
 			buildConfigurations = (
 				DF2D6C332E8A57B10045152C /* Debug */,
 				DF2D6C342E8A57B10045152C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DFD338D12EA8B6CD00E0A522 /* Build configuration list for PBXNativeTarget "PickfitTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DFD338CF2EA8B6CD00E0A522 /* Debug */,
+				DFD338D02EA8B6CD00E0A522 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -449,14 +572,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 3.2.0;
-			};
-		};
-		DF2D6CF72E8A5F880045152C /* XCRemoteSwiftPackageReference "RxSwift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/ReactiveX/RxSwift.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 6.9.0;
 			};
 		};
 		DF2D6CFE2E8A5F950045152C /* XCRemoteSwiftPackageReference "SnapKit" */ = {
@@ -523,6 +638,14 @@
 				minimumVersion = 12.4.0;
 			};
 		};
+		DFD338DD2EA8B91A00E0A522 /* XCRemoteSwiftPackageReference "RxSwift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ReactiveX/RxSwift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.9.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -540,21 +663,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = DF2D6CF42E8A5F710045152C /* XCRemoteSwiftPackageReference "ReactorKit" */;
 			productName = ReactorKit;
-		};
-		DF2D6CF82E8A5F880045152C /* RxCocoa */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DF2D6CF72E8A5F880045152C /* XCRemoteSwiftPackageReference "RxSwift" */;
-			productName = RxCocoa;
-		};
-		DF2D6CFA2E8A5F880045152C /* RxRelay */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DF2D6CF72E8A5F880045152C /* XCRemoteSwiftPackageReference "RxSwift" */;
-			productName = RxRelay;
-		};
-		DF2D6CFC2E8A5F880045152C /* RxSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DF2D6CF72E8A5F880045152C /* XCRemoteSwiftPackageReference "RxSwift" */;
-			productName = RxSwift;
 		};
 		DF2D6CFF2E8A5F950045152C /* SnapKit */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -620,6 +728,26 @@
 			isa = XCSwiftPackageProductDependency;
 			package = DFCD322A2E9DE9090092BEE9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
+		};
+		DFD338DE2EA8B91A00E0A522 /* RxCocoa */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFD338DD2EA8B91A00E0A522 /* XCRemoteSwiftPackageReference "RxSwift" */;
+			productName = RxCocoa;
+		};
+		DFD338E02EA8B91A00E0A522 /* RxRelay */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFD338DD2EA8B91A00E0A522 /* XCRemoteSwiftPackageReference "RxSwift" */;
+			productName = RxRelay;
+		};
+		DFD338E22EA8B91A00E0A522 /* RxSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFD338DD2EA8B91A00E0A522 /* XCRemoteSwiftPackageReference "RxSwift" */;
+			productName = RxSwift;
+		};
+		DFD338E42EA8B91A00E0A522 /* RxTest */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFD338DD2EA8B91A00E0A522 /* XCRemoteSwiftPackageReference "RxSwift" */;
+			productName = RxTest;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
