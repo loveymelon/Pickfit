@@ -74,9 +74,26 @@ final class ProductDetailViewController: BaseViewController<ProductDetailView> {
         super.viewDidLoad()
         title = "상품 상세"
 
+        configureNavigationBar()
         // CollectionView 셀 등록
         mainView.collectionView.register(StoreDetailCell.self, forCellWithReuseIdentifier: StoreDetailCell.identifier)
         mainView.collectionView.register(ProductInfoCell.self, forCellWithReuseIdentifier: ProductInfoCell.identifier)
+    }
+    
+    private func configureNavigationBar() {
+        let backButton = UIBarButtonItem(
+            image: UIImage(named: "chevron"),
+            style: .plain,
+            target: self,
+            action: #selector(backButtonTapped)
+        )
+        backButton.tintColor = .black
+        navigationItem.leftBarButtonItem = backButton
+        navigationItem.hidesBackButton = true
+    }
+    
+    @objc private func backButtonTapped() {
+        navigationController?.popViewController(animated: true)
     }
 
     override func bind() {

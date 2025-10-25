@@ -124,13 +124,16 @@ final class OrderHistoryReactor: Reactor {
         print("📡 [OrderHistoryReactor] Fetching from API")
 
         return run(
-            operation: { send in
+            operation: { [weak self] send in
+                guard let self = self else { return }
+
                 send(.setLoading(true))
                 let orders = try await self.orderRepository.fetchOrderList()
+
                 send(.setOrders(orders))
             },
             onError: { error in
-                .setError(error.localizedDescription)
+                return .setError(error.localizedDescription)
             }
         )
     }

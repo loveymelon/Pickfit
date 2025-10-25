@@ -90,7 +90,25 @@ final class OrderDetailViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         configureData()
+        configureNavigationBar()
     }
+    
+    private func configureNavigationBar() {
+        let backButton = UIBarButtonItem(
+            image: UIImage(named: "chevron"),
+            style: .plain,
+            target: self,
+            action: #selector(backButtonTapped)
+        )
+        backButton.tintColor = .black
+        navigationItem.leftBarButtonItem = backButton
+        navigationItem.hidesBackButton = true
+    }
+    
+    @objc private func backButtonTapped() {
+        navigationController?.popViewController(animated: true)
+    }
+
 
     private func setupUI() {
         view.backgroundColor = .systemGroupedBackground

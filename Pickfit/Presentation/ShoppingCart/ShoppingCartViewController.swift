@@ -19,6 +19,23 @@ final class ShoppingCartViewController: BaseViewController<ShoppingCartView> {
         super.viewDidLoad()
         title = "장바구니"
         hideCartButton() // 장바구니 화면에서는 우측 상단 버튼 숨김
+        configureNavigationBar()
+    }
+    
+    private func configureNavigationBar() {
+        let backButton = UIBarButtonItem(
+            image: UIImage(named: "chevron"),
+            style: .plain,
+            target: self,
+            action: #selector(backButtonTapped)
+        )
+        backButton.tintColor = .black
+        navigationItem.leftBarButtonItem = backButton
+        navigationItem.hidesBackButton = true
+    }
+    
+    @objc private func backButtonTapped() {
+        navigationController?.popViewController(animated: true)
     }
 
     override func bind() {

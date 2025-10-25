@@ -10,6 +10,29 @@ import SnapKit
 import Then
 import Kingfisher
 
+// MARK: - 캐싱 전략 정의
+
+/// 이미지 캐싱 전략 (뷰 특성에 따른 최적화)
+enum ImageCachingStrategy {
+    /// 디스크 + 메모리 캐싱 (기본값)
+    /// - 사용처: 상품 이미지, 프로필 이미지 등 재사용 빈도 높은 이미지
+    /// - 장점: 빠른 재로드, 데이터 절약
+    /// - 단점: 디스크 용량 사용
+    case diskAndMemory
+
+    /// 메모리 캐싱만 사용
+    /// - 사용처: 채팅 이미지, 일회성 콘텐츠
+    /// - 장점: 디스크 용량 절약, 캐시 관리 용이
+    /// - 단점: 앱 재시작 시 재다운로드
+    case memoryOnly
+
+    /// 캐싱 사용 안 함
+    /// - 사용처: 실시간 데이터 (QR 코드, 일회용 쿠폰 등)
+    /// - 장점: 항상 최신 상태 보장
+    /// - 단점: 매번 다운로드 (느림, 데이터 소모)
+    case none
+}
+
 final class ImageLoadView: UIView {
     private let imageView = UIImageView().then {
         $0.clipsToBounds = true
@@ -60,12 +83,18 @@ final class ImageLoadView: UIView {
 
     private var currentImageURL: String?
     private let downsamplingSize: CGSize
+    private let cachingStrategy: ImageCachingStrategy
 
-    init(cornerRadius: CGFloat = 0, contentMode: UIView.ContentMode = .scaleAspectFill) {
+    init(
+        cornerRadius: CGFloat = 0,
+        contentMode: UIView.ContentMode = .scaleAspectFill,
+        cachingStrategy: ImageCachingStrategy = .diskAndMemory
+    ) {
         // 디바이스 width × height/2 크기로 다운샘플링
         let screenWidth = UIScreen.main.bounds.width
         let screenHeight = UIScreen.main.bounds.height
         self.downsamplingSize = CGSize(width: screenWidth, height: screenHeight / 2)
+        self.cachingStrategy = cachingStrategy
 
         super.init(frame: .zero)
 
@@ -134,9 +163,23 @@ final class ImageLoadView: UIView {
         var options: KingfisherOptionsInfo = [
             .requestModifier(modifier),
             .scaleFactor(UIScreen.main.scale),
-            .transition(.fade(0.2)),
-            .cacheOriginalImage
+            .transition(.fade(0.2))
         ]
+
+        // 캐싱 전략 적용
+        switch cachingStrategy {
+        case .diskAndMemory:
+            // 디스크 + 메모리 캐싱 (기본값)
+            options.append(.cacheOriginalImage)  // 원본 이미지도 디스크에 캐시
+
+        case .memoryOnly:
+            // 메모리 캐싱만 사용 (디스크 캐시 제외)
+            options.append(.cacheMemoryOnly)
+
+        case .none:
+            // 캐싱 사용 안 함
+            options.append(.forceRefresh)  // 항상 새로 다운로드
+        }
 
         // 다운샘플링 실패 시에는 원본 이미지 사용
         if !retryWithoutDownsampling {
