@@ -2,7 +2,7 @@
 //  ChatRoomMapper.swift
 //  Pickfit
 //
-//  Created by Claude on 10/11/25.
+//  Created by 김진수 on 10/11/25.
 //
 
 import Foundation
