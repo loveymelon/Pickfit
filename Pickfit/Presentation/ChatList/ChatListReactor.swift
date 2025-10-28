@@ -2,7 +2,7 @@
 //  ChatListReactor.swift
 //  Pickfit
 //
-//  Created by Claude on 10/11/25.
+//  Created by 김진수 on 10/11/25.
 //
 
 import Foundation
@@ -192,7 +192,7 @@ final class ChatListReactor: Reactor {
                         profileImage: "https://picsum.photos/200/200?random=1"
                     ),
                     ChatParticipantEntity(
-                        userId: KeychainAuthStorage.shared.readUserIdSync() ?? "me",
+                        userId: KeychainAuthStorage.shared.readUserId() ?? "me",
                         nick: "나",
                         profileImage: nil
                     )
@@ -224,7 +224,7 @@ final class ChatListReactor: Reactor {
                         profileImage: "https://picsum.photos/200/200?random=2"
                     ),
                     ChatParticipantEntity(
-                        userId: KeychainAuthStorage.shared.readUserIdSync() ?? "me",
+                        userId: KeychainAuthStorage.shared.readUserId() ?? "me",
                         nick: "나",
                         profileImage: nil
                     )
@@ -256,7 +256,7 @@ final class ChatListReactor: Reactor {
                         profileImage: "https://picsum.photos/200/200?random=3"
                     ),
                     ChatParticipantEntity(
-                        userId: KeychainAuthStorage.shared.readUserIdSync() ?? "me",
+                        userId: KeychainAuthStorage.shared.readUserId() ?? "me",
                         nick: "나",
                         profileImage: nil
                     )
@@ -288,7 +288,7 @@ final class ChatListReactor: Reactor {
                         profileImage: nil
                     ),
                     ChatParticipantEntity(
-                        userId: KeychainAuthStorage.shared.readUserIdSync() ?? "me",
+                        userId: KeychainAuthStorage.shared.readUserId() ?? "me",
                         nick: "나",
                         profileImage: nil
                     )

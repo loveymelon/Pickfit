@@ -2,7 +2,7 @@
 //  ChatStateManager.swift
 //  Pickfit
 //
-//  Created by Claude on 10/19/25.
+//  Created by 김진수 on 10/19/25.
 //
 
 import UIKit

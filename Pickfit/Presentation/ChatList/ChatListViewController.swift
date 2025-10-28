@@ -2,7 +2,7 @@
 //  ChatListViewController.swift
 //  Pickfit
 //
-//  Created by Claude on 10/11/25.
+//  Created by 김진수 on 10/11/25.
 //
 
 import UIKit
@@ -192,7 +192,7 @@ final class ChatListViewController: BaseViewController<ChatListView> {
         print("👆 [ChatList] Selected chat room: \(chatRoom.roomId)")
 
         // 현재 로그인한 사용자 ID 가져오기
-        let currentUserId = KeychainAuthStorage.shared.readUserIdSync() ?? ""
+        let currentUserId = KeychainAuthStorage.shared.readUserId() ?? ""
 
         // 상대방 참여자 찾기 (현재 사용자가 아닌 참여자)
         guard let otherParticipant = chatRoom.participants.first(where: { $0.userId != currentUserId }) else {

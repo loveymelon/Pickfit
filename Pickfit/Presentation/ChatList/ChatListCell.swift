@@ -2,7 +2,7 @@
 //  ChatListCell.swift
 //  Pickfit
 //
-//  Created by Claude on 10/11/25.
+//  Created by 김진수 on 10/11/25.
 //
 
 import UIKit
@@ -14,13 +14,9 @@ final class ChatListCell: UITableViewCell {
     private let cardView = UIView().then {
         $0.backgroundColor = .white
         $0.layer.cornerRadius = 16
-        $0.layer.shadowColor = UIColor.black.cgColor
-        $0.layer.shadowOpacity = 0.05
-        $0.layer.shadowOffset = CGSize(width: 0, height: 2)
-        $0.layer.shadowRadius = 8
     }
 
-    private let profileImageView = ImageLoadView(cornerRadius: 28).then {
+    private let profileImageView = ImageLoadView(cornerRadius: 8).then {
         $0.backgroundColor = .systemGray6
     }
 
@@ -121,7 +117,7 @@ final class ChatListCell: UITableViewCell {
 
     func configure(with chatRoom: ChatRoomEntity, isInitialLoad: Bool = false) {
         // Get other participant (not me)
-        let currentUserId = KeychainAuthStorage.shared.readUserIdSync() ?? ""
+        let currentUserId = KeychainAuthStorage.shared.readUserId() ?? ""
         let otherParticipant = chatRoom.participants.first { $0.userId != currentUserId }
 
         // Profile image
