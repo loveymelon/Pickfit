@@ -2,7 +2,7 @@
 //  ChatViewController.swift
 //  Pickfit
 //
-//  Created by Claude on 10/12/25.
+//  Created by 김진수 on 10/12/25.
 //
 
 import UIKit
@@ -15,6 +15,25 @@ final class ChatViewController: BaseViewController<ChatView>, View {
 
     var disposeBag = DisposeBag()
     private let roomInfo: (roomId: String, nickname: String, profileImageUrl: String?)
+
+    // 새 메시지 토스트
+    private let newMessageToast: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.black.withAlphaComponent(0.8)
+        view.layer.cornerRadius = 20
+        view.isHidden = true
+        view.isUserInteractionEnabled = true
+        return view
+    }()
+
+    private let toastLabel: UILabel = {
+        let label = UILabel()
+        label.text = "새로운 메시지"
+        label.textColor = .white
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textAlignment = .center
+        return label
+    }()
 
     init(roomInfo: (roomId: String, nickname: String, profileImageUrl: String?)) {
         self.roomInfo = roomInfo
@@ -30,6 +49,7 @@ final class ChatViewController: BaseViewController<ChatView>, View {
         setupTableView()
         setupKeyboardHandling()
         setupTextView()
+        setupNewMessageToast()
         hideCartButton() // 채팅 화면에서는 장바구니 버튼 숨김
 
         // Reactor 생성 및 할당
@@ -42,6 +62,75 @@ final class ChatViewController: BaseViewController<ChatView>, View {
         // 즉시 초기 데이터 로드 및 소켓 연결 시작
         print("🚀 [ChatViewController] Triggering viewDidLoad action")
         chatReactor.action.onNext(.viewDidLoad)
+    }
+
+    private func setupNewMessageToast() {
+        // 토스트를 뷰에 추가
+        view.addSubview(newMessageToast)
+        newMessageToast.addSubview(toastLabel)
+
+        // 레이아웃
+        newMessageToast.translatesAutoresizingMaskIntoConstraints = false
+        toastLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            newMessageToast.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -100),
+            newMessageToast.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            newMessageToast.heightAnchor.constraint(equalToConstant: 40),
+            newMessageToast.widthAnchor.constraint(equalToConstant: 140),
+
+            toastLabel.centerXAnchor.constraint(equalTo: newMessageToast.centerXAnchor),
+            toastLabel.centerYAnchor.constraint(equalTo: newMessageToast.centerYAnchor)
+        ])
+
+        // 탭 제스처 추가
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleToastTap))
+        newMessageToast.addGestureRecognizer(tapGesture)
+    }
+
+    @objc private func handleToastTap() {
+        print("📩 [Toast] Tapped - scrolling to bottom")
+        hideNewMessageToast()
+        scrollToBottom(animated: true)
+    }
+
+    private func showNewMessageToast() {
+        guard newMessageToast.isHidden else { return }
+
+        newMessageToast.isHidden = false
+        newMessageToast.alpha = 0
+        newMessageToast.transform = CGAffineTransform(translationX: 0, y: 20)
+
+        UIView.animate(withDuration: 0.3) {
+            self.newMessageToast.alpha = 1
+            self.newMessageToast.transform = .identity
+        }
+
+        // 3초 후 자동 숨김
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            self?.hideNewMessageToast()
+        }
+    }
+
+    private func hideNewMessageToast() {
+        guard !newMessageToast.isHidden else { return }
+
+        UIView.animate(withDuration: 0.3) {
+            self.newMessageToast.alpha = 0
+        } completion: { _ in
+            self.newMessageToast.isHidden = true
+        }
+    }
+
+    private func isScrolledToBottom() -> Bool {
+        let tableView = mainView.tableView
+        let offsetY = tableView.contentOffset.y
+        let contentHeight = tableView.contentSize.height
+        let frameHeight = tableView.frame.height
+
+        // 하단에서 100pt 이내면 "하단에 있음"으로 간주
+        let threshold: CGFloat = 100
+        return offsetY + frameHeight >= contentHeight - threshold
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -60,7 +149,7 @@ final class ChatViewController: BaseViewController<ChatView>, View {
         // 탭바 배지 업데이트
         if let tabBarController = tabBarController {
             let totalCount = BadgeManager.shared.getTotalUnreadCount()
-            let chatTabIndex = 2 // 채팅 탭 인덱스 (MainTabBarController 구조에 맞게 조정)
+            let chatTabIndex = 3 // 채팅 탭 인덱스 (홈:0, 주문:1, 커뮤니티:2, 채팅:3, 마이:4)
             tabBarController.tabBar.items?[chatTabIndex].badgeValue = totalCount > 0 ? "\(totalCount)" : nil
             print("📊 [ChatViewController] Tab badge updated: \(totalCount)")
         }
@@ -162,10 +251,26 @@ final class ChatViewController: BaseViewController<ChatView>, View {
             return
         }
 
-        let lastIndexPath = IndexPath(row: reactor.currentState.messages.count - 1, section: 0)
+        let messagesCount = reactor.currentState.messages.count
+        let lastIndexPath = IndexPath(row: messagesCount - 1, section: 0)
+
+        print("📜 [ScrollToBottom] Messages count: \(messagesCount)")
         print("📜 [ScrollToBottom] Scrolling to index: \(lastIndexPath.row)")
+        print("📜 [ScrollToBottom] TableView numberOfRows: \(mainView.tableView.numberOfRows(inSection: 0))")
         print("📜 [ScrollToBottom] TableView contentSize: \(mainView.tableView.contentSize)")
-        print("📜 [ScrollToBottom] TableView frame: \(mainView.tableView.frame)")
+
+        // TableView가 아직 reloadData를 완료하지 않았을 수 있으므로 체크
+        let actualRowCount = mainView.tableView.numberOfRows(inSection: 0)
+        guard lastIndexPath.row < actualRowCount else {
+            print("⚠️ [ScrollToBottom] IndexPath out of range. Expected: \(messagesCount), Actual: \(actualRowCount)")
+            // reloadData 후 다시 시도
+            DispatchQueue.main.async {
+                if lastIndexPath.row < self.mainView.tableView.numberOfRows(inSection: 0) {
+                    self.mainView.tableView.scrollToRow(at: lastIndexPath, at: .bottom, animated: animated)
+                }
+            }
+            return
+        }
 
         mainView.tableView.scrollToRow(at: lastIndexPath, at: .bottom, animated: animated)
     }
@@ -221,23 +326,38 @@ final class ChatViewController: BaseViewController<ChatView>, View {
 
         // 메시지 목록 변경 시 테이블뷰 리로드 (pagination이 아닌 경우)
         reactor.state.map { $0.messages }
-            .distinctUntilChanged { $0.count == $1.count }
+            .scan((previous: [ChatMessageEntity](), current: [ChatMessageEntity]())) { accumulated, new in
+                return (previous: accumulated.current, current: new)
+            }
             .observe(on: MainScheduler.instance)
-            .subscribe(onNext: { [weak self] messages in
+            .subscribe(onNext: { [weak self] messagePair in
                 guard let self = self, let reactor = self.reactor else { return }
+
+                let previousCount = messagePair.previous.count
+                let currentCount = messagePair.current.count
+
+                // 메시지가 추가된 경우 (새 메시지)
+                // ⚠️ 초기 로드는 제외 (previousCount == 0)
+                let isNewMessage = currentCount > previousCount && previousCount > 0
 
                 // prependedCount가 0인 경우에만 reloadData (초기 로드, 새 메시지 추가)
                 // prependedCount > 0이면 insertRows 구독에서 처리
                 if reactor.currentState.prependedCount == 0 {
-                    print("📊 [ChatViewController] Messages changed (not pagination): \(messages.count)")
-                    messages.forEach { msg in
+                    print("📊 [ChatViewController] Messages changed (not pagination): \(currentCount)")
+                    messagePair.current.forEach { msg in
                         print("  - [\(msg.isMyMessage ? "ME" : "OTHER")] \(msg.content)")
                     }
                     self.mainView.tableView.reloadData()
 
-                    // 초기 로드나 새 메시지 추가 시 스크롤
-                    DispatchQueue.main.async {
-                        self.scrollToBottom(animated: false)
+                    // 새 메시지가 추가되었고, 스크롤이 하단이 아니면 토스트 표시
+                    if isNewMessage && !self.isScrolledToBottom() {
+                        print("📩 [Toast] Showing new message toast")
+                        self.showNewMessageToast()
+                    } else {
+                        // 초기 로드 또는 하단에 있으면 자동 스크롤
+                        DispatchQueue.main.async {
+                            self.scrollToBottom(animated: false)
+                        }
                     }
                 } else {
                     print("📊 [ChatViewController] Messages changed but prependedCount > 0, skipping reloadData")
@@ -563,7 +683,10 @@ extension ChatViewController: UITableViewDataSource {
         let showProfile = shouldShowProfile(at: indexPath)
 
         print("✅ [TableView] Configuring cell with: \(message.content), showTime: \(showTime), showProfile: \(showProfile)")
-        cell.configure(with: message, showTime: showTime, showProfile: showProfile)
+
+        // 헤더의 프로필 이미지 URL을 셀에 전달
+        let profileImageUrl = mainView.profileImageUrlString
+        cell.configure(with: message, showTime: showTime, showProfile: showProfile, profileImageUrl: profileImageUrl)
 
         // 이미지 탭 시 전체화면 뷰어 표시
         cell.onImageTapped = { [weak self] imageURL in

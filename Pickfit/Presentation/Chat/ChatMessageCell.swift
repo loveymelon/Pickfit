@@ -2,7 +2,7 @@
 //  ChatMessageCell.swift
 //  Pickfit
 //
-//  Created by Claude on 10/12/25.
+//  Created by 김진수 on 10/12/25.
 //
 
 import UIKit
@@ -68,7 +68,7 @@ final class ChatMessageCell: UITableViewCell {
         contentView.addSubview(timeLabel)
     }
 
-    func configure(with message: ChatMessageEntity, showTime: Bool = true, showProfile: Bool = true) {
+    func configure(with message: ChatMessageEntity, showTime: Bool = true, showProfile: Bool = true, profileImageUrl: String? = nil) {
         print("🔧 [ChatMessageCell] Configuring cell")
         print("  - isMyMessage: \(message.isMyMessage)")
         print("  - content: \(message.content)")
@@ -97,6 +97,11 @@ final class ChatMessageCell: UITableViewCell {
         } else {
             // 상대방 메시지는 showProfile 값에 따라
             profileImageView.isHidden = !showProfile
+
+            // 프로필 이미지 로드 (헤더와 동일한 URL 사용)
+            if showProfile {
+                loadProfileImage(urlString: profileImageUrl)
+            }
         }
 
         // 레이아웃 업데이트
@@ -464,7 +469,7 @@ final class ChatMessageCell: UITableViewCell {
             "SeSACKey": APIKey.sesacKey
         ]
 
-        if let accessToken = KeychainAuthStorage.shared.readAccessSync() {
+        if let accessToken = KeychainAuthStorage.shared.readAccess() {
             headers["Authorization"] = accessToken
         }
 
@@ -683,12 +688,60 @@ final class ChatMessageCell: UITableViewCell {
         return result
     }
 
+    private func loadProfileImage(urlString: String?) {
+        guard let urlString = urlString, !urlString.isEmpty else {
+            profileImageView.image = UIImage(systemName: "person.circle.fill")
+            profileImageView.tintColor = .systemGray3
+            return
+        }
+
+        let fullURL: String
+        if urlString.hasPrefix("http://") || urlString.hasPrefix("https://") {
+            fullURL = urlString
+        } else {
+            fullURL = APIKey.baseURL + urlString
+        }
+
+        guard let url = URL(string: fullURL) else {
+            profileImageView.image = UIImage(systemName: "person.circle.fill")
+            profileImageView.tintColor = .systemGray3
+            return
+        }
+
+        var headers: [String: String] = [
+            "SeSACKey": APIKey.sesacKey
+        ]
+
+        if let accessToken = KeychainAuthStorage.shared.readAccess() {
+            headers["Authorization"] = accessToken
+        }
+
+        let modifier = AnyModifier { request in
+            var modifiedRequest = request
+            headers.forEach { key, value in
+                modifiedRequest.setValue(value, forHTTPHeaderField: key)
+            }
+            return modifiedRequest
+        }
+
+        profileImageView.kf.setImage(
+            with: url,
+            placeholder: UIImage(systemName: "person.circle.fill"),
+            options: [
+                .requestModifier(modifier),
+                .transition(.fade(0.2)),
+                .cacheOriginalImage
+            ]
+        )
+    }
+
     override func prepareForReuse() {
         super.prepareForReuse()
         messageLabel.text = nil
         timeLabel.text = nil
         timeLabel.isHidden = false
-        profileImageView.isHidden = false  // 재사용 시 프로필 초기화
+        profileImageView.isHidden = false
+        profileImageView.image = nil  // 프로필 이미지 초기화
 
         // 이미지 뷰 초기화
         imageViews.forEach { $0.removeFromSuperview() }

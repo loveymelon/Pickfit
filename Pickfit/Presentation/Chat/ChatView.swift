@@ -2,12 +2,13 @@
 //  ChatView.swift
 //  Pickfit
 //
-//  Created by Claude on 10/12/25.
+//  Created by 김진수 on 10/12/25.
 //
 
 import UIKit
 import SnapKit
 import Then
+import Kingfisher
 
 final class ChatView: BaseView {
 
@@ -21,22 +22,19 @@ final class ChatView: BaseView {
         $0.tintColor = .white
     }
 
-    private let profileImageView = UIImageView().then {
+    let profileImageView = UIImageView().then {
         $0.backgroundColor = .systemGray5
         $0.layer.cornerRadius = 20
         $0.clipsToBounds = true
         $0.contentMode = .scaleAspectFill
     }
 
+    // 프로필 이미지 URL 저장 (셀에서 사용)
+    private(set) var profileImageUrlString: String?
+
     private let nicknameLabel = UILabel().then {
         $0.font = .systemFont(ofSize: 16, weight: .semibold)
         $0.textColor = .white
-    }
-
-    private let statusLabel = UILabel().then {
-        $0.text = "Online"
-        $0.font = .systemFont(ofSize: 12, weight: .regular)
-        $0.textColor = .white.withAlphaComponent(0.8)
     }
 
     let menuButton = UIButton().then {
@@ -112,7 +110,6 @@ final class ChatView: BaseView {
         headerView.addSubview(backButton)
         headerView.addSubview(profileImageView)
         headerView.addSubview(nicknameLabel)
-        headerView.addSubview(statusLabel)
         headerView.addSubview(menuButton)
     }
 
@@ -136,13 +133,8 @@ final class ChatView: BaseView {
 
         nicknameLabel.snp.makeConstraints {
             $0.leading.equalTo(profileImageView.snp.trailing).offset(16)
-            $0.bottom.equalTo(profileImageView.snp.centerY).offset(-3)
+            $0.centerY.equalTo(profileImageView)
             $0.trailing.lessThanOrEqualTo(menuButton.snp.leading).offset(-8)
-        }
-
-        statusLabel.snp.makeConstraints {
-            $0.leading.equalTo(nicknameLabel)
-            $0.top.equalTo(profileImageView.snp.centerY).offset(3)
         }
 
         menuButton.snp.makeConstraints {
@@ -198,7 +190,47 @@ final class ChatView: BaseView {
 
     func configure(nickname: String, profileImageUrl: String?) {
         nicknameLabel.text = nickname
-        // TODO: 프로필 이미지 로드
+
+        // 프로필 이미지 URL 저장 (셀에서 사용)
+        self.profileImageUrlString = profileImageUrl
+
+        // 프로필 이미지 로드
+        if let profileImageUrl = profileImageUrl, !profileImageUrl.isEmpty {
+            let fullURL: String
+            if profileImageUrl.hasPrefix("http://") || profileImageUrl.hasPrefix("https://") {
+                fullURL = profileImageUrl
+            } else {
+                fullURL = "http://pickup.sesac.kr:31668/v1" + profileImageUrl
+            }
+
+            Task {
+                let accessToken = await KeychainAuthStorage.shared.readAccess()
+
+                let modifier = AnyModifier { request in
+                    var modifiedRequest = request
+                    modifiedRequest.setValue(APIKey.sesacKey, forHTTPHeaderField: "SeSACKey")
+                    if let token = accessToken {
+                        modifiedRequest.setValue(token, forHTTPHeaderField: "Authorization")
+                    }
+                    return modifiedRequest
+                }
+
+                await MainActor.run {
+                    self.profileImageView.kf.setImage(
+                        with: URL(string: fullURL),
+                        placeholder: UIImage(systemName: "person.circle.fill"),
+                        options: [
+                            .requestModifier(modifier),
+                            .transition(.fade(0.2)),
+                            .cacheOriginalImage
+                        ]
+                    )
+                }
+            }
+        } else {
+            profileImageView.image = UIImage(systemName: "person.circle.fill")
+            profileImageView.tintColor = .systemGray3
+        }
     }
 
     func updateSendButton(isEnabled: Bool) {

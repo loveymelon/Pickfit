@@ -64,7 +64,7 @@ extension SocketIOManager {
         print("📍 소켓 네임스페이스: \(socketCase.namespace)")
 
         // 토큰 가져오기 (동기 방식)
-        let token = KeychainAuthStorage.shared.readAccessSync() ?? ""
+        let token = KeychainAuthStorage.shared.readAccess() ?? ""
         print("🔑 토큰 길이: \(token.count)")
 
         let config: SocketIOClientConfiguration = [
