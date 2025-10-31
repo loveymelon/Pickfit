@@ -39,6 +39,17 @@ final class ImageLoadView: UIView {
         $0.backgroundColor = .systemGray6
     }
 
+    // 외부에서 직접 이미지 설정 가능하도록 노출
+    var image: UIImage? {
+        get { imageView.image }
+        set {
+            imageView.image = newValue
+            // 이미지 설정 시 로딩/에러 뷰 숨김
+            loadingIndicator.stopAnimating()
+            errorView.isHidden = true
+        }
+    }
+
     private let loadingIndicator = UIActivityIndicatorView(style: .medium).then {
         $0.hidesWhenStopped = true
         $0.color = .gray
@@ -100,6 +111,11 @@ final class ImageLoadView: UIView {
 
         imageView.layer.cornerRadius = cornerRadius
         imageView.contentMode = contentMode
+
+        // ImageLoadView 자체에도 cornerRadius 적용 (배경색이 보일 때를 대비)
+        self.layer.cornerRadius = cornerRadius
+        self.clipsToBounds = true
+
         configureUI()
         setupActions()
     }
@@ -109,13 +125,18 @@ final class ImageLoadView: UIView {
     }
 
     func loadImage(from urlString: String?) {
+        print("🖼️ [ImageLoadView] loadImage 호출")
+        print("   - urlString: \(urlString ?? "nil")")
+
         guard let urlString = urlString else {
+            print("   ❌ urlString is nil")
             showError()
             return
         }
 
         // 같은 URL이면 중복 로드 방지
         if currentImageURL == urlString, imageView.image != nil {
+            print("   ⏭️ 중복 로드 방지 (이미 로드됨)")
             return
         }
 
@@ -126,12 +147,15 @@ final class ImageLoadView: UIView {
         let fullURLString: String
         if urlString.hasPrefix("http://") || urlString.hasPrefix("https://") {
             fullURLString = urlString
+            print("   🌐 절대 URL: \(fullURLString)")
         } else {
             let baseURL = "http://pickup.sesac.kr:31668/v1"
             fullURLString = baseURL + urlString
+            print("   🔗 상대 → 절대 변환: \(fullURLString)")
         }
 
         guard let url = URL(string: fullURLString) else {
+            print("   ❌ Invalid URL: \(fullURLString)")
             showError()
             return
         }
@@ -140,15 +164,96 @@ final class ImageLoadView: UIView {
         errorView.isHidden = true
         loadingIndicator.startAnimating()
 
+        print("   🔄 로딩 시작...")
+
         // 토큰을 먼저 가져온 후 이미지 로드
         Task {
             let accessToken = await KeychainAuthStorage.shared.readAccess()
+            print("   🔐 Token 가져옴: \(accessToken != nil ? "있음" : "없음")")
             loadImageWithToken(url: url, accessToken: accessToken)
+        }
+    }
+
+    /// 동영상 URL에서 썸네일 생성 후 표시
+    func loadVideoThumbnail(from urlString: String?) {
+        print("🎬 [ImageLoadView] loadVideoThumbnail 호출됨")
+        print("   - urlString: \(urlString ?? "nil")")
+
+        guard let urlString = urlString else {
+            print("   ❌ urlString is nil")
+            showError()
+            return
+        }
+
+        // 같은 URL이면 중복 로드 방지
+        if currentImageURL == urlString, imageView.image != nil {
+            print("   ⏭️ 중복 로드 방지 (이미 로드됨)")
+            return
+        }
+
+        // 이전 로딩 취소
+        imageView.kf.cancelDownloadTask()
+
+        // 상대 경로인 경우 baseURL 추가
+        let fullURLString: String
+        if urlString.hasPrefix("http://") || urlString.hasPrefix("https://") {
+            fullURLString = urlString
+            print("   🌐 절대 URL: \(fullURLString)")
+        } else {
+            let baseURL = "http://pickup.sesac.kr:31668/v1"
+            fullURLString = baseURL + urlString
+            print("   🔗 상대 → 절대 변환: \(fullURLString)")
+        }
+
+        guard let url = URL(string: fullURLString) else {
+            print("   ❌ Invalid URL: \(fullURLString)")
+            showError()
+            return
+        }
+
+        currentImageURL = urlString
+        errorView.isHidden = true
+        loadingIndicator.startAnimating()
+        print("   🔄 로딩 인디케이터 시작")
+
+        // 썸네일 생성 (백그라운드)
+        Task {
+            do {
+                // 토큰 가져오기
+                let accessToken = await KeychainAuthStorage.shared.readAccess()
+                print("   🔐 Token 가져옴: \(accessToken != nil ? "있음" : "없음")")
+
+                print("🎬 [ImageLoadView] Generating video thumbnail for: \(url.lastPathComponent)")
+                let thumbnail = try await VideoThumbnailGenerator.shared.generateQuickThumbnail(from: url, accessToken: accessToken)
+                print("   ✅ 썸네일 생성 완료: \(thumbnail.size)")
+
+                await MainActor.run {
+                    print("   🎨 UI 업데이트 시작")
+                    self.imageView.image = thumbnail
+                    self.imageView.contentMode = .scaleAspectFill
+                    self.loadingIndicator.stopAnimating()
+                    self.errorView.isHidden = true
+                    print("✅ [ImageLoadView] Video thumbnail loaded successfully")
+
+                    // Kingfisher 캐시에 저장 (다음에 재사용)
+                    ImageCache.default.store(thumbnail, forKey: fullURLString)
+                }
+            } catch {
+                print("❌ [ImageLoadView] Failed to generate video thumbnail: \(error.localizedDescription)")
+                print("   - Error: \(error)")
+                await MainActor.run {
+                    self.showError()
+                }
+            }
         }
     }
 
     @MainActor
     private func loadImageWithToken(url: URL, accessToken: String?, retryWithoutDownsampling: Bool = false) {
+        print("   📥 [ImageLoadView] Kingfisher 로드 시작")
+        print("      - URL: \(url)")
+        print("      - downsampling: \(!retryWithoutDownsampling)")
+
         let modifier = AnyModifier { request in
             var modifiedRequest = request
             modifiedRequest.setValue(APIKey.sesacKey, forHTTPHeaderField: "SeSACKey")
@@ -195,16 +300,22 @@ final class ImageLoadView: UIView {
                 self?.loadingIndicator.stopAnimating()
 
                 switch result {
-                case .success:
+                case .success(let value):
+                    print("      ✅ [ImageLoadView] 이미지 로드 성공!")
+                    print("         - size: \(value.image.size)")
+                    print("         - source: \(value.cacheType)")
                     self?.errorView.isHidden = true
+
                 case .failure(let error):
+                    print("      ❌ [ImageLoadView] 이미지 로드 실패: \(error.localizedDescription)")
+
                     // 프로세서 에러 처리
                     if case .processorError = error {
                         if !retryWithoutDownsampling {
-                            print("⚠️ [Image] Downsampling failed, retrying with original image")
+                            print("      ⚠️ [Image] Downsampling failed, retrying with original image")
                             self?.loadImageWithToken(url: url, accessToken: accessToken, retryWithoutDownsampling: true)
                         } else {
-                            print("❌ [Image] Original image processing also failed")
+                            print("      ❌ [Image] Original image processing also failed")
                             // 이미지 처리 불가능 - 에러 표시하지 않고 플레이스홀더만 표시
                             self?.errorView.isHidden = true
                             self?.imageView.image = UIImage(systemName: "photo")

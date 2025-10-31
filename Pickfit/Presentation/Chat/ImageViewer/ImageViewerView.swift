@@ -2,7 +2,7 @@
 //  ImageViewerView.swift
 //  Pickfit
 //
-//  Created by Claude on 10/14/25.
+//  Created by 김진수 on 10/14/25.
 //
 
 import UIKit

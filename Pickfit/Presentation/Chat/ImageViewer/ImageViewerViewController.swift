@@ -2,7 +2,7 @@
 //  ImageViewerViewController.swift
 //  Pickfit
 //
-//  Created by Claude on 10/14/25.
+//  Created by 김진수 on 10/14/25.
 //
 
 import UIKit
@@ -69,7 +69,7 @@ final class ImageViewerViewController: BaseViewController<ImageViewerView> {
             "SeSACKey": APIKey.sesacKey
         ]
 
-        if let accessToken = KeychainAuthStorage.shared.readAccessSync() {
+        if let accessToken = KeychainAuthStorage.shared.readAccess() {
             headers["Authorization"] = accessToken
         }
 
