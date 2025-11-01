@@ -2,7 +2,7 @@
 //  PostRepository.swift
 //  Pickfit
 //
-//  Created by Claude on 2025-10-20.
+//  Created by 김진수 on 2025-10-20.
 //
 
 import Foundation
@@ -43,6 +43,40 @@ final class PostRepository {
                 next: next,
                 orderBy: orderBy.rawValue
             )
+        )
+
+        return dto
+    }
+
+    /// 게시글 상세 조회
+    /// - Parameter postId: 게시글 ID
+    func fetchPostDetail(postId: String) async throws -> PostDetailResponseDTO {
+        let dto = try await NetworkManager.shared.fetch(
+            dto: PostDetailResponseDTO.self,
+            router: PostRouter.fetchPostDetail(postId: postId)
+        )
+
+        return dto
+    }
+
+    /// 댓글 작성
+    /// - Parameters:
+    ///   - postId: 게시글 ID
+    ///   - content: 댓글 내용
+    ///   - parentCommentId: 부모 댓글 ID (대댓글일 경우)
+    func createComment(
+        postId: String,
+        content: String,
+        parentCommentId: String? = nil
+    ) async throws -> CreateCommentResponseDTO {
+        let request = CreateCommentRequestDTO(
+            content: content,
+            parentCommentId: parentCommentId
+        )
+
+        let dto = try await NetworkManager.shared.fetch(
+            dto: CreateCommentResponseDTO.self,
+            router: PostRouter.createComment(postId: postId, request: request)
         )
 
         return dto
