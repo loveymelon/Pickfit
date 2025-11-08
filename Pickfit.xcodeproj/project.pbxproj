@@ -24,6 +24,7 @@
 		DFCD322C2E9DE9090092BEE9 /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = DFCD322B2E9DE9090092BEE9 /* FirebaseAnalyticsCore */; };
 		DFCD322E2E9DE9090092BEE9 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = DFCD322D2E9DE9090092BEE9 /* FirebaseCrashlytics */; };
 		DFCD32302E9DE9090092BEE9 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = DFCD322F2E9DE9090092BEE9 /* FirebaseMessaging */; };
+		DFD11F982EC317E300E76A33 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = DFD11F972EC317E300E76A33 /* Lottie */; };
 		DFD338DF2EA8B91A00E0A522 /* RxCocoa in Frameworks */ = {isa = PBXBuildFile; productRef = DFD338DE2EA8B91A00E0A522 /* RxCocoa */; };
 		DFD338E12EA8B91A00E0A522 /* RxRelay in Frameworks */ = {isa = PBXBuildFile; productRef = DFD338E02EA8B91A00E0A522 /* RxRelay */; };
 		DFD338E32EA8B91A00E0A522 /* RxSwift in Frameworks */ = {isa = PBXBuildFile; productRef = DFD338E22EA8B91A00E0A522 /* RxSwift */; };
@@ -92,6 +93,7 @@
 				DF2D6CF62E8A5F710045152C /* ReactorKit in Frameworks */,
 				DF9715F12E90349F004FF049 /* RxDataSources in Frameworks */,
 				DFCD322C2E9DE9090092BEE9 /* FirebaseAnalyticsCore in Frameworks */,
+				DFD11F982EC317E300E76A33 /* Lottie in Frameworks */,
 				DF2D6D1B2E8A674B0045152C /* KakaoSDKAuth in Frameworks */,
 				DFCD322E2E9DE9090092BEE9 /* FirebaseCrashlytics in Frameworks */,
 				DF588F032E97BBCD009C58AA /* iamport-ios in Frameworks */,
@@ -168,6 +170,7 @@
 				DFD338DE2EA8B91A00E0A522 /* RxCocoa */,
 				DFD338E02EA8B91A00E0A522 /* RxRelay */,
 				DFD338E22EA8B91A00E0A522 /* RxSwift */,
+				DFD11F972EC317E300E76A33 /* Lottie */,
 			);
 			productName = Pickfit;
 			productReference = DF2D6C1F2E8A57AF0045152C /* Pickfit.app */;
@@ -238,6 +241,7 @@
 				DFA1AFFF2E9A000000000001 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */,
 				DFCD322A2E9DE9090092BEE9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				DFD338DD2EA8B91A00E0A522 /* XCRemoteSwiftPackageReference "RxSwift" */,
+				DFD11F962EC317E300E76A33 /* XCRemoteSwiftPackageReference "lottie-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DF2D6C202E8A57AF0045152C /* Products */;
@@ -638,6 +642,14 @@
 				minimumVersion = 12.4.0;
 			};
 		};
+		DFD11F962EC317E300E76A33 /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.5.2;
+			};
+		};
 		DFD338DD2EA8B91A00E0A522 /* XCRemoteSwiftPackageReference "RxSwift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ReactiveX/RxSwift.git";
@@ -728,6 +740,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = DFCD322A2E9DE9090092BEE9 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseMessaging;
+		};
+		DFD11F972EC317E300E76A33 /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFD11F962EC317E300E76A33 /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
 		};
 		DFD338DE2EA8B91A00E0A522 /* RxCocoa */ = {
 			isa = XCSwiftPackageProductDependency;

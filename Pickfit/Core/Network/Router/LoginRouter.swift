@@ -11,13 +11,16 @@ import Alamofire
 enum LoginRouter: Router {
     case kakaoLogin(KakaoRequestDTO)
     case appleLogin(AppleRequestDTO)
+    case emailLogin(EmailLoginRequestDTO)
+    case signUp(SignUpRequestDTO)
+    case validateEmail(EmailValidationRequestDTO)
     case refreshToken(RefreshTokenRequestDTO)
 }
 
 extension LoginRouter {
     var method: HTTPMethod {
         switch self {
-        case .kakaoLogin, .appleLogin:
+        case .kakaoLogin, .appleLogin, .emailLogin, .signUp, .validateEmail:
             return .post
         case .refreshToken:
             return .get
@@ -30,6 +33,12 @@ extension LoginRouter {
             return "/users/login/kakao"
         case .appleLogin:
             return "/users/login/apple"
+        case .emailLogin:
+            return "/users/login"
+        case .signUp:
+            return "/users/join"
+        case .validateEmail:
+            return "/users/validation/email"
         case .refreshToken:
             return "/auth/refresh"
         }
@@ -37,7 +46,7 @@ extension LoginRouter {
 
     var optionalHeaders: HTTPHeaders? {
         switch self {
-        case .kakaoLogin, .appleLogin:
+        case .kakaoLogin, .appleLogin, .emailLogin, .signUp, .validateEmail:
             return HTTPHeaders([
                 HTTPHeader(name: "SeSACKey", value: APIKey.sesacKey),
                 HTTPHeader(name: "accept", value: "application/json")
@@ -54,7 +63,7 @@ extension LoginRouter {
 
     var parameters: Parameters? {
         switch self {
-        case .kakaoLogin, .appleLogin:
+        case .kakaoLogin, .appleLogin, .emailLogin, .signUp, .validateEmail:
             return nil
         case .refreshToken:
             return nil
@@ -67,6 +76,12 @@ extension LoginRouter {
             return requestToBody(requestDTO)
         case let .appleLogin(requestDTO):
             return requestToBody(requestDTO)
+        case let .emailLogin(requestDTO):
+            return requestToBody(requestDTO)
+        case let .signUp(requestDTO):
+            return requestToBody(requestDTO)
+        case let .validateEmail(requestDTO):
+            return requestToBody(requestDTO)
         case .refreshToken:
             return nil
         }
@@ -74,7 +89,7 @@ extension LoginRouter {
 
     var encodingType: EncodingType {
         switch self {
-        case .kakaoLogin, .appleLogin:
+        case .kakaoLogin, .appleLogin, .emailLogin, .signUp, .validateEmail:
             return .json
         case .refreshToken:
             return .url

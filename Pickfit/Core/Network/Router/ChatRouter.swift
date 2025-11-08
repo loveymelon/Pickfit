@@ -10,6 +10,7 @@ import Alamofire
 
 enum ChatRouter: Router {
     case fetchChatRoomList
+    case createChatRoom(opponentId: String)  // 채팅방 생성/조회
     case fetchChatHistory(roomId: String, next: String?)
     case sendMessage(roomId: String, content: String, files: [String])
     case uploadFiles(roomId: String, fileDataList: [(data: Data, fileName: String, isPDF: Bool)])  // 파일 업로드 (multipart/form-data)
@@ -20,6 +21,8 @@ extension ChatRouter {
         switch self {
         case .fetchChatRoomList:
             return .get
+        case .createChatRoom:
+            return .post
         case .fetchChatHistory:
             return .get
         case .sendMessage:
@@ -32,6 +35,8 @@ extension ChatRouter {
     var path: String {
         switch self {
         case .fetchChatRoomList:
+            return "/chats"
+        case .createChatRoom:
             return "/chats"
         case .fetchChatHistory(let roomId, _):
             return "/chats/\(roomId)"
@@ -62,6 +67,9 @@ extension ChatRouter {
         case .fetchChatRoomList:
             return nil
 
+        case .createChatRoom:
+            return nil
+
         case .fetchChatHistory(_, let next):
             if let next = next {
                 return ["next": next]
@@ -80,6 +88,12 @@ extension ChatRouter {
         switch self {
         case .fetchChatRoomList:
             return nil
+
+        case .createChatRoom(let opponentId):
+            let bodyDict: [String: Any] = [
+                "opponent_id": opponentId
+            ]
+            return try? JSONSerialization.data(withJSONObject: bodyDict)
 
         case .fetchChatHistory:
             return nil
@@ -100,6 +114,8 @@ extension ChatRouter {
         switch self {
         case .fetchChatRoomList:
             return .url
+        case .createChatRoom:
+            return .json
         case .fetchChatHistory:
             return .url
         case .sendMessage:

@@ -2,7 +2,7 @@
 //  CommunityCell.swift
 //  Pickfit
 //
-//  Created by Claude on 2025-10-20.
+//  Created by 김진수 on 2025-10-20.
 //
 
 import UIKit
@@ -15,6 +15,19 @@ final class CommunityCell: UICollectionViewCell {
 
     private let gradientView = UIView().then {
         $0.backgroundColor = .clear
+    }
+
+    private let playButtonOverlay = UIView().then {
+        $0.backgroundColor = UIColor.black.withAlphaComponent(0.3)
+        $0.isHidden = true
+        $0.layer.cornerRadius = 12
+        $0.clipsToBounds = true
+    }
+
+    private let playIconImageView = UIImageView().then {
+        $0.image = UIImage(systemName: "play.circle.fill")
+        $0.tintColor = .white
+        $0.contentMode = .scaleAspectFit
     }
 
     private let titleLabel = UILabel().then {
@@ -48,11 +61,17 @@ final class CommunityCell: UICollectionViewCell {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        updateGradientFrame()
+    }
+
+    private func updateGradientFrame() {
         gradientLayer.frame = gradientView.bounds
     }
 
     private func setupUI() {
         contentView.addSubview(imageView)
+        contentView.addSubview(playButtonOverlay)
+        playButtonOverlay.addSubview(playIconImageView)
         contentView.addSubview(gradientView)
         contentView.addSubview(titleLabel)
         contentView.addSubview(userNameLabel)
@@ -70,6 +89,15 @@ final class CommunityCell: UICollectionViewCell {
             $0.edges.equalToSuperview()
         }
 
+        playButtonOverlay.snp.makeConstraints {
+            $0.edges.equalToSuperview()
+        }
+
+        playIconImageView.snp.makeConstraints {
+            $0.center.equalToSuperview()
+            $0.width.height.equalTo(60)
+        }
+
         gradientView.snp.makeConstraints {
             $0.leading.trailing.bottom.equalToSuperview()
             $0.height.equalTo(100)
@@ -77,30 +105,52 @@ final class CommunityCell: UICollectionViewCell {
 
         likeButton.snp.makeConstraints {
             $0.trailing.equalToSuperview().offset(-12)
-            $0.bottom.equalToSuperview().offset(-12)
+            $0.bottom.equalTo(userNameLabel)
         }
 
         titleLabel.snp.makeConstraints {
             $0.leading.equalToSuperview().offset(12)
-            $0.trailing.equalTo(likeButton.snp.leading).offset(-8)
             $0.bottom.equalTo(userNameLabel.snp.top).offset(-4)
         }
 
         userNameLabel.snp.makeConstraints {
             $0.leading.equalToSuperview().offset(12)
-            $0.trailing.equalTo(likeButton.snp.leading).offset(-8)
             $0.bottom.equalToSuperview().offset(-12)
         }
 
         contentView.layer.cornerRadius = 12
         contentView.clipsToBounds = true
+
+        // Shadow configuration
+        layer.shadowColor = UIColor.black.cgColor
+        layer.shadowOpacity = 0.1
+        layer.shadowOffset = CGSize(width: 0, height: 2)
+        layer.shadowRadius = 4
+        layer.masksToBounds = false
+
+        // Gradient corner radius
+        gradientLayer.cornerRadius = 12
+        gradientLayer.maskedCorners = [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
     }
 
     func configure(with item: CommunityItem) {
-        imageView.loadImage(from: item.imageUrl)
+        // 동영상이면 썸네일 생성, 이미지면 바로 로드
+        if item.isVideo {
+            imageView.loadVideoThumbnail(from: item.imageUrl)
+        } else {
+            imageView.loadImage(from: item.imageUrl)
+        }
+
         titleLabel.text = item.title
         userNameLabel.text = "@\(item.userName)"
         likeButton.setTitle(" \(item.likeCount)", for: .normal)
+
+        // 동영상이면 재생 버튼 오버레이 표시
+        playButtonOverlay.isHidden = !item.isVideo
+
+        // Force layout and update gradient immediately
+        layoutIfNeeded()
+        updateGradientFrame()
     }
 
     override func prepareForReuse() {

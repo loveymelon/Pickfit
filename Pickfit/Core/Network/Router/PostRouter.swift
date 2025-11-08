@@ -2,7 +2,7 @@
 //  PostRouter.swift
 //  Pickfit
 //
-//  Created by Claude on 2025-10-20.
+//  Created by 김진수 on 2025-10-20.
 //
 
 import Foundation
@@ -18,13 +18,17 @@ enum PostRouter: Router {
         next: String?,
         orderBy: String
     )
+    case fetchPostDetail(postId: String)
+    case createComment(postId: String, request: CreateCommentRequestDTO)
 }
 
 extension PostRouter {
     var method: HTTPMethod {
         switch self {
-        case .fetchPostsByGeolocation:
+        case .fetchPostsByGeolocation, .fetchPostDetail:
             return .get
+        case .createComment:
+            return .post
         }
     }
 
@@ -32,6 +36,10 @@ extension PostRouter {
         switch self {
         case .fetchPostsByGeolocation:
             return "/posts/geolocation"
+        case .fetchPostDetail(let postId):
+            return "/posts/\(postId)"
+        case .createComment(let postId, _):
+            return "/posts/\(postId)/comments"
         }
     }
 
@@ -70,17 +78,27 @@ extension PostRouter {
             }
 
             return params
+
+        case .fetchPostDetail, .createComment:
+            return nil  // path parameter만 사용
         }
     }
 
     var body: Data? {
-        return nil
+        switch self {
+        case .createComment(_, let request):
+            return try? JSONEncoder().encode(request)
+        default:
+            return nil
+        }
     }
 
     var encodingType: EncodingType {
         switch self {
-        case .fetchPostsByGeolocation:
+        case .fetchPostsByGeolocation, .fetchPostDetail:
             return .url
+        case .createComment:
+            return .json
         }
     }
 }

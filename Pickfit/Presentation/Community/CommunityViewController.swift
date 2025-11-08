@@ -2,7 +2,7 @@
 //  CommunityViewController.swift
 //  Pickfit
 //
-//  Created by Claude on 2025-10-20.
+//  Created by 김진수 on 2025-10-20.
 //
 
 import UIKit
@@ -71,8 +71,19 @@ final class CommunityViewController: BaseViewController<CommunityView> {
         // Cell Selection
         mainView.collectionView.rx.itemSelected
             .subscribe(onNext: { [weak self] indexPath in
-                print("Selected item at: \(indexPath)")
-                // TODO: Navigate to detail view
+                guard let self = self else { return }
+                let items = self.reactor.currentState.items
+                guard indexPath.item < items.count else { return }
+
+                let selectedItem = items[indexPath.item]
+                print("🎯 [Community] Cell 선택됨")
+                print("   - indexPath: \(indexPath)")
+                print("   - postId: \(selectedItem.id)")
+
+                // CommunityDetail 화면으로 이동
+                print("🚀 [Community] CommunityDetailViewController 생성 및 push")
+                let detailVC = CommunityDetailViewController(postId: selectedItem.id)
+                self.navigationController?.pushViewController(detailVC, animated: true)
             })
             .disposed(by: disposeBag)
 

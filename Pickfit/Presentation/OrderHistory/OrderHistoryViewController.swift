@@ -32,6 +32,9 @@ final class OrderHistoryViewController: BaseViewController<OrderHistoryView> {
             case .historyOrder(let order):
                 let cell = tableView.dequeueReusableCell(withIdentifier: OrderHistoryRowCell.identifier, for: indexPath) as! OrderHistoryRowCell
                 cell.configure(with: order)
+                cell.onWriteReviewTapped = { [weak self] order in
+                    self?.showReviewWrite(order)
+                }
                 return cell
             }
         },
@@ -50,7 +53,11 @@ final class OrderHistoryViewController: BaseViewController<OrderHistoryView> {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupNavigationBar()
+
+        // 네비게이션 바 영역까지 뷰 확장
+        edgesForExtendedLayout = [.top]
+        extendedLayoutIncludesOpaqueBars = true
+
         registerCells()
 
         print("📱 [OrderHistory] viewDidLoad called")
@@ -60,19 +67,12 @@ final class OrderHistoryViewController: BaseViewController<OrderHistoryView> {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        navigationController?.setNavigationBarHidden(true, animated: animated)
+        navigationController?.setNavigationBarHidden(true, animated: false)
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        navigationController?.setNavigationBarHidden(false, animated: animated)
-    }
-
-    private func setupNavigationBar() {
-//        title = "주문 현황"
-        navigationController?.navigationBar.prefersLargeTitles = false
-        // 장바구니 버튼 제거
-        navigationItem.rightBarButtonItem = nil
+        navigationController?.setNavigationBarHidden(false, animated: false)
     }
 
     private func registerCells() {
@@ -111,6 +111,10 @@ final class OrderHistoryViewController: BaseViewController<OrderHistoryView> {
     }
 
     private func bindState() {
+        // Set delegate for custom header/footer
+        mainView.tableView.rx.setDelegate(self)
+            .disposed(by: disposeBag)
+
         // Sections
         orderReactor.state
             .map { $0.sections }
@@ -156,6 +160,85 @@ final class OrderHistoryViewController: BaseViewController<OrderHistoryView> {
         let alert = UIAlertController(title: "알림", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "확인", style: .default))
         present(alert, animated: true)
+    }
+
+    private func showReviewWrite(_ order: OrderHistoryEntity) {
+        print("✏️ [OrderHistory] Write review for order: \(order.orderCode)")
+
+        let alert = UIAlertController(
+            title: "리뷰 작성",
+            message: "\(order.store.name)에 대한 리뷰를 작성하시겠습니까?",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "취소", style: .cancel))
+        alert.addAction(UIAlertAction(title: "작성하기", style: .default) { _ in
+            // TODO: Navigate to ReviewWriteViewController
+            print("📝 Navigate to review write screen")
+        })
+        present(alert, animated: true)
+    }
+}
+
+// MARK: - UITableViewDelegate
+extension OrderHistoryViewController: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let sections = orderReactor.currentState.sections
+        guard section < sections.count else { return nil }
+
+        let sectionModel = sections[section]
+
+        // History 섹션만 흰색 배경 뷰 추가
+        if case .history = sectionModel.model {
+            let headerView = UIView()
+            headerView.backgroundColor = .white
+
+            // 상단 라운드 코너만
+            headerView.layer.cornerRadius = 12
+            headerView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+
+            // 섹션 타이틀 라벨
+            let titleLabel = UILabel()
+            titleLabel.text = "이전 주문 내역"
+            titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+            titleLabel.textColor = .black
+
+            headerView.addSubview(titleLabel)
+
+            titleLabel.snp.makeConstraints {
+                $0.leading.equalToSuperview().offset(20)
+                $0.trailing.equalToSuperview().offset(-20)
+                $0.top.equalToSuperview().offset(16)
+                $0.bottom.equalToSuperview().offset(-8)
+            }
+
+            return headerView
+        }
+
+        return nil
+    }
+
+    func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {
+        return nil
+    }
+
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        let sections = orderReactor.currentState.sections
+        guard section < sections.count else { return 0 }
+
+        let sectionModel = sections[section]
+
+        switch sectionModel.model {
+        case .banner:
+            return 0
+        case .ongoing:
+            return 40
+        case .history:
+            return 56  // 타이틀 공간
+        }
+    }
+
+    func tableView(_ tableView: UITableView, heightForFooterInSection section: Int) -> CGFloat {
+        return 0
     }
 }
 

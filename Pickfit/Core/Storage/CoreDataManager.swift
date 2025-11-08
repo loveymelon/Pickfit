@@ -2,7 +2,7 @@
 //  CoreDataManager.swift
 //  Pickfit
 //
-//  Created by Claude on 10/12/25.
+//  Created by 김진수 on 10/12/25.
 //
 
 import Foundation
@@ -11,6 +11,12 @@ import CloudKit
 
 /// CoreData + CloudKit 통합 관리자
 /// NSPersistentCloudKitContainer를 사용하여 자동 iCloud 동기화 제공
+///
+/// ## iCloud 계정 상태 처리
+/// - 계정 없음/비활성화: 로컬 저장은 정상 작동, CloudKit 동기화 불가
+/// - 감지 방법: CKContainer.accountStatus() 호출
+/// - 알림: NotificationCenter를 통해 .cloudKitAccountUnavailable 전송
+/// - UI 연동: ViewController에서 Notification 수신하여 사용자 안내
 ///
 /// ## iCloud 용량 초과 처리
 /// - 용량 초과 시: 로컬 저장은 정상 작동, CloudKit 동기화만 중단
@@ -24,6 +30,12 @@ import CloudKit
 /// 2. 동기화: 중단 (새 데이터가 다른 기기로 전송 안 됨)
 /// 3. 사용자 알림: "iCloud 저장 공간이 부족합니다" 메시지 표시
 /// 4. 해결 방법: 설정 > [사용자 이름] > iCloud > 저장 공간 관리
+///
+/// ### iCloud 비활성화 시 동작
+/// 1. 로컬 앱: 정상 작동 (CoreData 저장 계속)
+/// 2. 동기화: 불가 (멀티 디바이스 동기화 안 됨)
+/// 3. 사용자 알림: "iCloud에 로그인하지 않아 동기화되지 않습니다" 메시지 표시
+/// 4. 해결 방법: 설정 > [사용자 이름] > iCloud > 로그인
 final class CoreDataManager {
 
     // MARK: - Singleton
@@ -32,6 +44,7 @@ final class CoreDataManager {
 
     private init() {
         setupCloudKitNotifications()
+        checkiCloudAccountStatus()
     }
 
     // MARK: - Core Data Stack
@@ -121,6 +134,61 @@ final class CoreDataManager {
                 print("[CoreData] 백그라운드 저장 실패: \(nsError)")
             }
         }
+    }
+
+    // MARK: - CloudKit Account Status
+
+    /// iCloud 계정 상태 확인
+    /// - Note: 앱 시작 시 한 번 호출하여 iCloud 로그인 여부 확인
+    ///         로그인되지 않은 경우 사용자에게 알림
+    private func checkiCloudAccountStatus() {
+        let container = CKContainer(identifier: "iCloud.Pickfit")
+
+        container.accountStatus { [weak self] status, error in
+            if let error = error {
+                print("[CloudKit] ⚠️ 계정 상태 확인 실패: \(error.localizedDescription)")
+                return
+            }
+
+            DispatchQueue.main.async {
+                switch status {
+                case .available:
+                    print("[CloudKit] ✅ iCloud 계정 사용 가능 - 동기화 활성화")
+
+                case .noAccount:
+                    print("[CloudKit] ⚠️ iCloud 계정 없음 - 로컬만 저장됨")
+                    self?.notifyiCloudAccountUnavailable(reason: "iCloud에 로그인하지 않아 다른 기기와 동기화되지 않습니다.")
+
+                case .restricted:
+                    print("[CloudKit] ⚠️ iCloud 접근 제한됨 (예: 자녀 보호 기능)")
+                    self?.notifyiCloudAccountUnavailable(reason: "iCloud 접근이 제한되어 동기화할 수 없습니다.")
+
+                case .couldNotDetermine:
+                    print("[CloudKit] ⚠️ iCloud 상태 확인 불가")
+
+                case .temporarilyUnavailable:
+                    print("[CloudKit] ⚠️ iCloud 일시적으로 사용 불가 - 나중에 재시도")
+
+                @unknown default:
+                    print("[CloudKit] ⚠️ 알 수 없는 계정 상태: \(status.rawValue)")
+                }
+            }
+        }
+    }
+
+    /// iCloud 계정 비활성화 알림 전송
+    /// - Parameter reason: 비활성화 이유 (예: "계정 없음", "접근 제한됨")
+    /// - Note: NotificationCenter를 통해 앱 전체에 알림
+    ///         ViewController에서 수신하여 사용자 UI 표시
+    private func notifyiCloudAccountUnavailable(reason: String) {
+        NotificationCenter.default.post(
+            name: .cloudKitAccountUnavailable,
+            object: nil,
+            userInfo: [
+                "message": reason,
+                "action": "설정 > [사용자 이름] > iCloud에서 로그인해주세요."
+            ]
+        )
     }
 
     // MARK: - CloudKit Sync Monitoring
@@ -226,6 +294,35 @@ final class CoreDataManager {
 // MARK: - Notification Names
 
 extension Notification.Name {
+    /// iCloud 계정 비활성화 알림
+    ///
+    /// ## 사용 방법 (ViewController에서)
+    /// ```swift
+    /// NotificationCenter.default.addObserver(
+    ///     forName: .cloudKitAccountUnavailable,
+    ///     object: nil,
+    ///     queue: .main
+    /// ) { notification in
+    ///     let message = notification.userInfo?["message"] as? String ?? ""
+    ///     let action = notification.userInfo?["action"] as? String ?? ""
+    ///
+    ///     // 예: UIAlertController
+    ///     let alert = UIAlertController(
+    ///         title: "iCloud 동기화 불가",
+    ///         message: "\(message)\n\(action)",
+    ///         preferredStyle: .alert
+    ///     )
+    ///     alert.addAction(UIAlertAction(title: "설정 열기", style: .default) { _ in
+    ///         if let url = URL(string: UIApplication.openSettingsURLString) {
+    ///             UIApplication.shared.open(url)
+    ///         }
+    ///     })
+    ///     alert.addAction(UIAlertAction(title: "나중에", style: .cancel))
+    ///     self.present(alert, animated: true)
+    /// }
+    /// ```
+    static let cloudKitAccountUnavailable = Notification.Name("cloudKitAccountUnavailable")
+
     /// iCloud 용량 초과 알림
     ///
     /// ## 사용 방법 (ViewController에서)

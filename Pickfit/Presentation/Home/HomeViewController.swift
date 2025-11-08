@@ -17,16 +17,67 @@ final class HomeViewController: BaseViewController<HomeView> {
 
     private let reactor = HomeReactor()
 
+    // 배너 자동 스크롤을 위한 Timer
+    private var bannerTimer: Timer?
+    private var currentBannerIndex = 0
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
         setupNavigationBar()
         mainView.collectionView.setCollectionViewLayout(makeCollectionView(), animated: false)
+        // ⚠️ delegate를 수동으로 설정하면 RxSwift와 충돌
+        // mainView.collectionView.delegate = self
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        startBannerAutoScroll()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        stopBannerAutoScroll()
+    }
+
+    deinit {
+        stopBannerAutoScroll()
     }
 
     private func setupNavigationBar() {
         navigationItem.leftBarButtonItem = UIBarButtonItem(customView: mainView.titleLabel)
-        // searchButton은 제거 - BaseViewController에서 cartButton이 추가됨
+
+        // 검색 버튼 추가
+        let searchButton = UIBarButtonItem(
+            image: UIImage(systemName: "magnifyingglass"),
+            style: .plain,
+            target: self,
+            action: #selector(searchButtonTapped)
+        )
+        searchButton.tintColor = .black
+
+        // 하트 버튼 추가 (좋아요/피슐랭 기능)
+//        let heartButton = UIBarButtonItem(
+//            image: UIImage(systemName: "heart"),
+//            style: .plain,
+//            target: self,
+//            action: #selector(heartButtonTapped)
+//        )
+//        heartButton.tintColor = .black
+        // 우측부터 카트, 간격, 하트, 간격, 검색 순서로 배치
+        if let cartButton = navigationItem.rightBarButtonItem {
+            navigationItem.rightBarButtonItems = [cartButton, searchButton]
+        }
+    }
+
+    @objc private func searchButtonTapped() {
+        print("🔍 [Home] Search button tapped")
+        // TODO: 검색 화면 이동 또는 검색 UI 표시
+    }
+
+    @objc private func heartButtonTapped() {
+        print("❤️ [Home] Heart button tapped")
+        // TODO: 좋아요/피슐랭 리스트 화면 이동
     }
 
     override func bind() {
@@ -170,6 +221,13 @@ final class HomeViewController: BaseViewController<HomeView> {
                 case .category(let category):
                     self.navigateToStoreList(category: category)
 
+                case .banner(let banner):
+                    // 배너 클릭 시 WebView 처리
+                    print("🎯 [Banner] Clicked - Type: \(banner.payload.type), Value: \(banner.payload.value)")
+                    if banner.payload.type == "WEBVIEW" {
+                        self.navigateToWebView(urlString: banner.payload.value)
+                    }
+
                 case .stores(let store):
                     // 브랜드 선택 이벤트
                     let stores = self.reactor.currentState.stores
@@ -182,6 +240,35 @@ final class HomeViewController: BaseViewController<HomeView> {
                 }
             })
             .disposed(by: disposeBag)
+
+        // 스크롤 이벤트 - 사용자 수동 스크롤 감지
+        mainView.collectionView.rx.willBeginDragging
+            .subscribe(onNext: { [weak self] _ in
+                // 사용자가 수동으로 스크롤 시작하면 타이머 정지
+                self?.stopBannerAutoScroll()
+            })
+            .disposed(by: disposeBag)
+
+        mainView.collectionView.rx.didEndDragging
+            .subscribe(onNext: { [weak self] _ in
+                // 사용자가 스크롤 끝내면 타이머 재시작
+                self?.startBannerAutoScroll()
+            })
+            .disposed(by: disposeBag)
+
+        mainView.collectionView.rx.didEndDecelerating
+            .subscribe(onNext: { [weak self] _ in
+                // 배너 섹션의 현재 인덱스 업데이트
+                self?.updateCurrentBannerIndex()
+            })
+            .disposed(by: disposeBag)
+
+        mainView.collectionView.rx.didEndScrollingAnimation
+            .subscribe(onNext: { [weak self] _ in
+                // 자동 스크롤 완료 후 현재 인덱스 업데이트
+                self?.updateCurrentBannerIndex()
+            })
+            .disposed(by: disposeBag)
     }
 
     private func navigateToLogin() {
@@ -191,6 +278,55 @@ final class HomeViewController: BaseViewController<HomeView> {
     private func navigateToStoreList(category: Category) {
         let storeListVC = StoreListViewController(category: category)
         navigationController?.pushViewController(storeListVC, animated: true)
+    }
+
+    private func navigateToWebView(urlString: String) {
+        let webVC = WebViewController(urlString: urlString)
+        navigationController?.pushViewController(webVC, animated: true)
+    }
+
+    // MARK: - Banner Auto Scroll
+
+    private func startBannerAutoScroll() {
+        // 기존 타이머 정리
+        stopBannerAutoScroll()
+
+        // 3초마다 배너 자동 넘김
+        bannerTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+            self?.scrollToNextBanner()
+        }
+    }
+
+    private func stopBannerAutoScroll() {
+        bannerTimer?.invalidate()
+        bannerTimer = nil
+    }
+
+    private func scrollToNextBanner() {
+        let bannerCount = reactor.currentState.banners.count
+        guard bannerCount > 0 else { return }
+
+        // 다음 배너 인덱스 계산 (무한 루프)
+        currentBannerIndex = (currentBannerIndex + 1) % bannerCount
+
+        // 배너 섹션 (section 2)으로 스크롤
+        let indexPath = IndexPath(item: currentBannerIndex, section: 2)
+
+        mainView.collectionView.scrollToItem(
+            at: indexPath,
+            at: .centeredHorizontally,
+            animated: true
+        )
+    }
+
+    private func updateCurrentBannerIndex() {
+        // 배너 섹션(section 2)의 visible item 확인
+        let visibleItems = mainView.collectionView.indexPathsForVisibleItems
+            .filter { $0.section == 2 }
+
+        if let firstVisibleItem = visibleItems.first {
+            currentBannerIndex = firstVisibleItem.item
+        }
     }
 }
 
@@ -260,9 +396,9 @@ extension HomeViewController {
         let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(1.0))
         let item = NSCollectionLayoutItem(layoutSize: itemSize)
 
-        let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(0.18), heightDimension: .fractionalHeight(0.11))
+        let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(0.18), heightDimension: .absolute(100))
         let group = NSCollectionLayoutGroup.vertical(layoutSize: groupSize, subitems: [item])
-        
+
         let section = NSCollectionLayoutSection(group: group)
         section.orthogonalScrollingBehavior = .continuous
         section.interGroupSpacing = 12

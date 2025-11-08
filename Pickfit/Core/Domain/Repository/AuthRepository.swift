@@ -27,8 +27,8 @@ final class AuthRepository {
             ))
         )
 
-        await tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
-        await tokenStorage.writeUserId(dto.userId)
+        tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
+        tokenStorage.writeUserId(dto.userId)
 
         print("✅ [AuthRepository] Kakao Login Success - userId: \(dto.userId)")
     }
@@ -59,15 +59,67 @@ final class AuthRepository {
             router: LoginRouter.appleLogin(requestDTO)
         )
 
-        await tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
-        await tokenStorage.writeUserId(dto.userId)
+        tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
+        tokenStorage.writeUserId(dto.userId)
 
         print("✅ [AuthRepository] Apple Login Success - userId: \(dto.userId)")
     }
 
+    func loginWithEmail(email: String, password: String) async throws {
+        let deviceToken = UserDefaults.standard.string(forKey: "deviceToken")
+        print("📤 [AuthRepository] Email Login with FCM Token: \(deviceToken ?? "none")")
+
+        let dto = try await NetworkManager.auth.fetch(
+            dto: KakaoResponseDTO.self,  // 응답 형식 동일
+            router: LoginRouter.emailLogin(EmailLoginRequestDTO(
+                email: email,
+                password: password,
+                deviceToken: deviceToken
+            ))
+        )
+
+        tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
+        tokenStorage.writeUserId(dto.userId)
+
+        print("✅ [AuthRepository] Email Login Success - userId: \(dto.userId)")
+    }
+
+    func signUp(email: String, password: String, nick: String, phoneNum: String) async throws {
+        let deviceToken = UserDefaults.standard.string(forKey: "deviceToken")
+        print("📤 [AuthRepository] SignUp Request - email: \(email), nick: \(nick)")
+
+        let dto = try await NetworkManager.auth.fetch(
+            dto: KakaoResponseDTO.self,  // 회원가입도 응답 형식 동일
+            router: LoginRouter.signUp(SignUpRequestDTO(
+                email: email,
+                password: password,
+                nick: nick,
+                phoneNum: phoneNum,
+                deviceToken: deviceToken
+            ))
+        )
+
+        tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
+        tokenStorage.writeUserId(dto.userId)
+
+        print("✅ [AuthRepository] SignUp Success - userId: \(dto.userId), nick: \(dto.nick)")
+    }
+
+    func validateEmail(_ email: String) async throws -> String {
+        print("📤 [AuthRepository] Email Validation Request - email: \(email)")
+
+        let dto = try await NetworkManager.auth.fetch(
+            dto: EmailValidationResponseDTO.self,
+            router: LoginRouter.validateEmail(EmailValidationRequestDTO(email: email))
+        )
+
+        print("✅ [AuthRepository] Email Validation Success - message: \(dto.message)")
+        return dto.message
+    }
+
     func refreshToken() async throws -> (accessToken: String, refreshToken: String) {
-        guard let refreshToken = await tokenStorage.readRefresh(),
-              let accessToken = await tokenStorage.readAccess() else {
+        guard let refreshToken = tokenStorage.readRefresh(),
+              let accessToken = tokenStorage.readAccess() else {
             throw NSError(domain: "AuthRepository", code: -1, userInfo: [NSLocalizedDescriptionKey: "Token이 없습니다"])
         }
 
@@ -79,7 +131,7 @@ final class AuthRepository {
             ))
         )
 
-        await tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
+        tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
 
         return (accessToken: dto.accessToken, refreshToken: dto.refreshToken)
     }

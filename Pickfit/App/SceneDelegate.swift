@@ -20,20 +20,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let scene = (scene as? UIWindowScene) else { return }
         window = UIWindow(windowScene: scene)
 
-        // 토큰 확인 후 초기 화면 설정
-        Task {
-            let hasToken = await KeychainAuthStorage.shared.readAccess() != nil
+        // Splash 화면 먼저 표시
+        let splashVC = SplashViewController()
+        window?.rootViewController = splashVC
+        window?.makeKeyAndVisible()
 
-            await MainActor.run {
-                if hasToken {
-                    // 토큰이 있으면 탭바로
-                    window?.rootViewController = MainTabBarController()
-                } else {
-                    // 토큰이 없으면 로그인 화면으로
-                    window?.rootViewController = LoginViewController()
-                }
-                window?.makeKeyAndVisible()
-            }
+        // 애니메이션 완료 후 메인 화면으로 전환
+        splashVC.onAnimationComplete = { [weak self] in
+            self?.navigateToMainScreen()
         }
 
         // 로그아웃 Notification 구독
@@ -51,6 +45,35 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             name: .openChatRoom,
             object: nil
         )
+    }
+
+    /// Splash 애니메이션 완료 후 메인 화면으로 전환
+    private func navigateToMainScreen() {
+        // 토큰 확인 후 초기 화면 설정
+        Task {
+            let hasToken = await KeychainAuthStorage.shared.readAccess() != nil
+
+            await MainActor.run {
+                let nextVC: UIViewController
+                if hasToken {
+                    // 토큰이 있으면 탭바로
+                    nextVC = MainTabBarController()
+                } else {
+                    // 토큰이 없으면 로그인 화면으로
+                    nextVC = LoginViewController()
+                }
+
+                // 부드러운 전환 애니메이션
+                UIView.transition(
+                    with: window!,
+                    duration: 0.3,
+                    options: .transitionCrossDissolve,
+                    animations: {
+                        self.window?.rootViewController = nextVC
+                    }
+                )
+            }
+        }
     }
 
     @objc private func handleNavigateToLogin() {

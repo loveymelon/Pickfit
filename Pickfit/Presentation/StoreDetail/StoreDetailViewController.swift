@@ -60,6 +60,50 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
         super.viewDidLoad()
         mainView.collectionView.setCollectionViewLayout(makeCollectionView(), animated: false)
         configureNavigationBar()
+
+        // 더미 장바구니 데이터 자동 추가
+        addDummyCartItems()
+    }
+
+    private func addDummyCartItems() {
+        // 현재 장바구니가 비어있을 때만 더미 데이터 추가
+        guard CartManager.shared.currentCartItems.isEmpty else { return }
+
+        // 더미 메뉴 데이터 생성 (6개)
+        let dummyMenus: [(name: String, price: Int, size: String, color: String, imageName: String?)] = [
+            ("나이키 에어포스 1", 129000, "270", "화이트", "에어포스 1"),
+            ("아디다스 슈퍼스타", 119000, "265", "블랙", "슈퍼스타"),
+            ("컨버스 척테일러", 89000, "280", "레드", "척테일러"),
+            ("반스 올드스쿨", 79000, "275", "네이비", "올드스쿨"),
+            ("뉴발란스 530", 139000, "270", "그레이", "530"),
+            ("푸마 스웨이드", 99000, "265", "그린", nil)
+        ]
+
+        // 각 더미 메뉴를 장바구니에 추가
+        for (index, dummy) in dummyMenus.enumerated() {
+            let dummyMenu = StoreDetailEntity.Menu(
+                menuId: "dummy_\(index)",
+                storeId: "dummy_store",
+                category: "신발",
+                name: dummy.name,
+                description: "더미 상품입니다",
+                originInformation: "",
+                price: dummy.price,
+                isSoldOut: false,
+                tags: [],
+                menuImageUrl: dummy.imageName ?? "",  // 로컬 이미지 이름
+                createdAt: "",
+                updatedAt: ""
+            )
+
+            CartManager.shared.addToCart(
+                menu: dummyMenu,
+                size: dummy.size,
+                color: dummy.color
+            )
+        }
+
+        print("✅ 더미 장바구니 데이터 6개 추가 완료")
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -69,12 +113,12 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
     }
 
     private func configureNavigationBar() {
-        // 네비게이션 바 투명하게 설정
+        // 네비게이션 바 투명하게 설정 (초기 상태)
         let appearance = UINavigationBarAppearance()
         appearance.configureWithTransparentBackground()
         appearance.backgroundColor = .clear
         appearance.shadowColor = nil
-        
+
         let backButton = UIBarButtonItem(
             image: UIImage(named: "chevron"),
             style: .plain,
@@ -88,6 +132,9 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
         navigationController?.navigationBar.standardAppearance = appearance
         navigationController?.navigationBar.scrollEdgeAppearance = appearance
         navigationController?.navigationBar.isTranslucent = true
+
+        // 초기에는 타이틀 숨김
+        title = nil
     }
     
     @objc private func backButtonTapped() {
@@ -302,6 +349,59 @@ final class StoreDetailViewController: BaseViewController<StoreDetailView> {
                 self?.navigateToShoppingCart()
             })
             .disposed(by: disposeBag)
+
+        // 스크롤 위치에 따른 네비게이션 바 제목 표시/숨김
+        mainView.collectionView.rx.contentOffset
+            .withLatestFrom(reactor.state.compactMap { $0.storeDetail }) { ($0, $1) }
+            .subscribe(onNext: { [weak self] offset, storeDetail in
+                self?.updateNavigationBarAppearance(offset: offset, storeName: storeDetail.name)
+            })
+            .disposed(by: disposeBag)
+    }
+
+    private func updateNavigationBarAppearance(offset: CGPoint, storeName: String) {
+        // 헤더 높이 (이미지 섹션)를 대략 계산
+        // 화면 높이의 50% + 헤더 높이(약 200pt) = 임계값
+        let thresholdY: CGFloat = UIScreen.main.bounds.height * 0.5 + 200 - 100
+
+        if offset.y > thresholdY {
+            // 스크롤 내려갔을 때 - 네비게이션 바 불투명 + 타이틀 표시
+            let appearance = UINavigationBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            appearance.backgroundColor = .white
+            appearance.shadowColor = .systemGray5
+            appearance.titleTextAttributes = [.foregroundColor: UIColor.black]
+
+            navigationController?.navigationBar.standardAppearance = appearance
+            navigationController?.navigationBar.scrollEdgeAppearance = appearance
+
+            // 타이틀 표시 (애니메이션)
+            if title != storeName {
+                UIView.transition(with: navigationController?.navigationBar ?? UIView(),
+                                  duration: 0.2,
+                                  options: .transitionCrossDissolve) {
+                    self.title = storeName
+                }
+            }
+        } else {
+            // 스크롤 위로 올라갔을 때 - 네비게이션 바 투명 + 타이틀 숨김
+            let appearance = UINavigationBarAppearance()
+            appearance.configureWithTransparentBackground()
+            appearance.backgroundColor = .clear
+            appearance.shadowColor = nil
+
+            navigationController?.navigationBar.standardAppearance = appearance
+            navigationController?.navigationBar.scrollEdgeAppearance = appearance
+
+            // 타이틀 숨김
+            if title != nil {
+                UIView.transition(with: navigationController?.navigationBar ?? UIView(),
+                                  duration: 0.2,
+                                  options: .transitionCrossDissolve) {
+                    self.title = nil
+                }
+            }
+        }
     }
 
     private func navigateToProductDetail(menus: [StoreDetailEntity.Menu]) {

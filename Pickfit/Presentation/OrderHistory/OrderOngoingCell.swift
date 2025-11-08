@@ -2,7 +2,7 @@
 //  OrderOngoingCell.swift
 //  Pickfit
 //
-//  Created by Claude on 2025-10-19.
+//  Created by 김진수 on 2025-10-19.
 //
 
 import UIKit
@@ -160,7 +160,7 @@ final class OrderOngoingCell: UITableViewCell {
         orderDateLabel.text = formatOrderDate(order.createdAt)
 
         // Store image (TwoTone 이미지)
-        storeImageView.image = UIImage(named: "Bulk")
+        storeImageView.image = UIImage(named: "truck")
 
         // Clear previous timeline
         timelineStack.arrangedSubviews.forEach { $0.removeFromSuperview() }

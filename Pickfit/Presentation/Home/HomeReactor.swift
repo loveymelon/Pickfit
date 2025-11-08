@@ -61,10 +61,14 @@ final class HomeReactor: Reactor {
                     print("📡 [API] HomeReactor - Starting API calls")
                     send(.setLoading(true))
 
+                    // 위치 정보 가져오기
+                    let location = await LocationManager.shared.getCurrentLocation()
+                    print("📍 [Location] Using coordinates: \(location.latitude), \(location.longitude)")
+
                     async let storesResult = self.storeRepository.fetchStores(
                         category: "Modern",
-                        longitude: 127.0,
-                        latitude: 37.5,
+                        longitude: location.longitude,
+                        latitude: location.latitude,
                         orderBy: .distance
                     )
                     async let bannersResponse = self.storeRepository.fetchBanners()

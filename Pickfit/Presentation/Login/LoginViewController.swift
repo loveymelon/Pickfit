@@ -24,6 +24,14 @@ final class LoginViewController: BaseViewController<LoginView> {
     override func bind() {
         let canLogin = reactor.state.map { !$0.isLoading }.distinctUntilChanged()
 
+        // 이메일 로그인 버튼
+        mainView.emailLoginButton.rx.tap
+            .throttle(.milliseconds(500), scheduler: MainScheduler.instance)
+            .subscribe(onNext: { [weak self] in
+                self?.navigateToEmailLogin()
+            })
+            .disposed(by: disposeBag)
+
         // 카카오 로그인 버튼
         mainView.kakaoSignInButton.rx.tap
             .withLatestFrom(canLogin)
@@ -73,6 +81,13 @@ final class LoginViewController: BaseViewController<LoginView> {
         let alert = UIAlertController(title: "로그인 오류", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "확인", style: .default))
         present(alert, animated: true)
+    }
+
+    private func navigateToEmailLogin() {
+        let emailLoginVC = EmailLoginViewController()
+        let navController = UINavigationController(rootViewController: emailLoginVC)
+        navController.modalPresentationStyle = .fullScreen
+        present(navController, animated: true)
     }
 
     private func navigateToHome() {

@@ -17,25 +17,23 @@ final class AuthInterceptor: RequestInterceptor {
 
     // MARK: - RequestAdapter
     func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {
-        Task {
-            var request = urlRequest
-            let requestPath = urlRequest.url?.path ?? "unknown"
-            let requestMethod = urlRequest.httpMethod ?? "unknown"
+        var request = urlRequest
+        let requestPath = urlRequest.url?.path ?? "unknown"
+        let requestMethod = urlRequest.httpMethod ?? "unknown"
 
-            // AccessToken을 헤더에 추가
-            if let accessToken = await tokenStorage.readAccess() {
-                print("🔐 [Auth Adapt] \(requestMethod) \(requestPath)")
-                print("   ✅ Token exists: \(accessToken.prefix(30))...")
-                print("   📋 Headers before: \(request.allHTTPHeaderFields ?? [:])")
-                request.setValue(accessToken, forHTTPHeaderField: "Authorization")
-                print("   📋 Headers after: \(request.allHTTPHeaderFields ?? [:])")
-            } else {
-                print("🔐 [Auth Adapt] \(requestMethod) \(requestPath)")
-                print("   ⚠️ No token available")
-            }
-
-            completion(.success(request))
+        // AccessToken을 헤더에 추가
+        if let accessToken = tokenStorage.readAccess() {
+            print("🔐 [Auth Adapt] \(requestMethod) \(requestPath)")
+            print("   ✅ Token exists: \(accessToken.prefix(30))...")
+            print("   📋 Headers before: \(request.allHTTPHeaderFields ?? [:])")
+            request.setValue(accessToken, forHTTPHeaderField: "Authorization")
+            print("   📋 Headers after: \(request.allHTTPHeaderFields ?? [:])")
+        } else {
+            print("🔐 [Auth Adapt] \(requestMethod) \(requestPath)")
+            print("   ⚠️ No token available")
         }
+
+        completion(.success(request))
     }
 
     // MARK: - RequestRetrier
@@ -71,7 +69,7 @@ final class AuthInterceptor: RequestInterceptor {
                     print("   ❌ Token refresh failed: \(error.localizedDescription)")
                     print("   🗑️ Clearing tokens...")
                     // RefreshToken 갱신 실패 → 토큰 삭제 후 에러 전파
-                    await tokenStorage.clear()
+                    self.tokenStorage.clear()
                     completion(.doNotRetry)
                 }
 
@@ -79,7 +77,7 @@ final class AuthInterceptor: RequestInterceptor {
                 print("   ❌ \(statusCode) - Auth failed (Critical)")
                 print("   🗑️ Clearing tokens...")
                 // 인증 불가능 또는 RefreshToken 만료 → 토큰 삭제 후 에러 전파
-                await tokenStorage.clear()
+                self.tokenStorage.clear()
                 completion(.doNotRetry)
 
             default:
@@ -92,8 +90,8 @@ final class AuthInterceptor: RequestInterceptor {
 
     // MARK: - Private Methods
     private func refreshTokens() async throws -> String {
-        guard let refreshToken = await tokenStorage.readRefresh(),
-              let accessToken = await tokenStorage.readAccess() else {
+        guard let refreshToken = tokenStorage.readRefresh(),
+              let accessToken = tokenStorage.readAccess() else {
             print("❌ [Refresh] No tokens available")
             throw NSError(domain: "AuthInterceptor", code: -1, userInfo: [NSLocalizedDescriptionKey: "Token이 없습니다"])
         }
@@ -118,7 +116,7 @@ final class AuthInterceptor: RequestInterceptor {
         print("✅ [Refresh] New tokens received - Saving to storage")
         print("✅ [Refresh] New access token: \(dto.accessToken.prefix(20))...")
         // 새 토큰 저장
-        await tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
+        tokenStorage.write(access: dto.accessToken, refresh: dto.refreshToken)
 
         return dto.accessToken
     }

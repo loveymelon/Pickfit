@@ -2,7 +2,7 @@
 //  PostResponseDTO.swift
 //  Pickfit
 //
-//  Created by Claude on 2025-10-20.
+//  Created by 김진수 on 2025-10-20.
 //
 
 import Foundation
@@ -92,5 +92,67 @@ struct CreatorDTO: DTO {
         case userId = "user_id"
         case nick
         case profileImage
+    }
+}
+
+struct PostDetailResponseDTO: DTO {
+    let postId: String
+    let category: String
+    let title: String
+    let content: String
+    let store: PostStoreDTO?
+    let geolocation: GeolocationDTO
+    let creator: CreatorDTO
+    let files: [String]
+    let isLike: Bool
+    let likeCount: Int
+    let comments: [CommentDTO]
+    let createdAt: String
+    let updatedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case postId = "post_id"
+        case category
+        case title
+        case content
+        case store
+        case geolocation
+        case creator
+        case files
+        case isLike = "is_like"
+        case likeCount = "like_count"
+        case comments
+        case createdAt
+        case updatedAt
+    }
+}
+
+struct CommentDTO: DTO {
+    let commentId: String
+    let content: String
+    let creator: CreatorDTO
+    let createdAt: String
+    let replies: [ReplyDTO]?  // 대댓글
+
+    enum CodingKeys: String, CodingKey {
+        case commentId = "comment_id"
+        case content
+        case creator
+        case createdAt
+        case replies
+    }
+}
+
+struct ReplyDTO: DTO {
+    let commentId: String
+    let content: String
+    let creator: CreatorDTO
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case commentId = "comment_id"
+        case content
+        case creator
+        case createdAt
     }
 }

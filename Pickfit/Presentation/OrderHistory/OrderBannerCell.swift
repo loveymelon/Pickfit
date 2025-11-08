@@ -2,7 +2,7 @@
 //  OrderBannerCell.swift
 //  Pickfit
 //
-//  Created by Claude on 2025-10-19.
+//  Created by 김진수 on 2025-10-19.
 //
 
 import UIKit

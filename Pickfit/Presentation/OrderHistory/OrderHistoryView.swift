@@ -46,7 +46,8 @@ final class OrderHistoryView: BaseView {
 
     override func configureLayout() {
         tableView.snp.makeConstraints {
-            $0.edges.equalTo(safeAreaLayoutGuide)
+            $0.top.leading.trailing.equalToSuperview()
+            $0.bottom.equalTo(safeAreaLayoutGuide)
         }
 
         emptyLabel.snp.makeConstraints {

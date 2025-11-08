@@ -21,6 +21,28 @@ final class ChatRepository: ChatRepositoryProtocol {
         return ChatRoomMapper.toEntities(dto.data)
     }
 
+    /// 채팅방 생성/조회 (특정 유저와의 1:1 채팅방)
+    /// - Parameter opponentId: 채팅 상대방 user_id
+    /// - Returns: (roomId, nickname, profileImage)
+    func createOrFetchChatRoom(opponentId: String) async throws -> (roomId: String, nickname: String, profileImage: String?) {
+        let dto = try await NetworkManager.shared.fetch(
+            dto: CreateChatRoomResponseDTO.self,
+            router: ChatRouter.createChatRoom(opponentId: opponentId)
+        )
+
+        // participants에서 상대방 정보 찾기 (나를 제외한 사람)
+        let currentUserId = KeychainAuthStorage.shared.readUserId() ?? ""
+        guard let opponent = dto.participants.first(where: { $0.userId != currentUserId }) else {
+            throw NSError(domain: "ChatRepository", code: -1, userInfo: [NSLocalizedDescriptionKey: "상대방 정보를 찾을 수 없습니다"])
+        }
+
+        return (
+            roomId: dto.roomId,
+            nickname: opponent.nick,
+            profileImage: opponent.profileImage
+        )
+    }
+
     /// 채팅 내역 조회 (CoreData 캐시 + API)
     func fetchChatHistory(roomId: String, next: String? = nil) async throws -> [ChatMessageEntity] {
         // 1. CoreData에서 캐시된 메시지 조회 (오프라인 지원 - 현재는 사용하지 않음)
@@ -32,7 +54,7 @@ final class ChatRepository: ChatRepositoryProtocol {
             router: ChatRouter.fetchChatHistory(roomId: roomId, next: next)
         )
 
-        let currentUserId = KeychainAuthStorage.shared.readUserIdSync() ?? ""
+        let currentUserId = KeychainAuthStorage.shared.readUserId() ?? ""
         let apiMessages = ChatMessageMapper.toEntities(dto.data, currentUserId: currentUserId)
 
         // 3. API 응답을 CoreData에 저장 (백그라운드)
@@ -66,7 +88,7 @@ final class ChatRepository: ChatRepositoryProtocol {
             router: ChatRouter.sendMessage(roomId: roomId, content: content, files: files)
         )
 
-        let currentUserId = KeychainAuthStorage.shared.readUserIdSync() ?? ""
+        let currentUserId = KeychainAuthStorage.shared.readUserId() ?? ""
         return ChatMessageMapper.toEntity(dto, currentUserId: currentUserId)
     }
 
@@ -80,7 +102,7 @@ final class ChatRepository: ChatRepositoryProtocol {
             type: ChatMessageDTO.self
         )
 
-        let currentUserId = KeychainAuthStorage.shared.readUserIdSync() ?? ""
+        let currentUserId = KeychainAuthStorage.shared.readUserId() ?? ""
         print("👤 [ChatRepository] Current user ID: \(currentUserId)")
 
         return AsyncStream { continuation in

@@ -2,7 +2,7 @@
 //  CommunityReactor.swift
 //  Pickfit
 //
-//  Created by Claude on 2025-10-20.
+//  Created by 김진수 on 2025-10-20.
 //
 
 import Foundation
@@ -128,34 +128,42 @@ final class CommunityReactor: Reactor {
 
     private func convertToItems(_ posts: [PostDTO]) -> [CommunityItem] {
         return posts.compactMap { post -> CommunityItem? in
-            // 이미지 URL 처리 (비디오 파일은 제외)
-            let imageUrl: String
-            if let firstFile = post.files.first {
-                // 비디오 파일 확장자 체크
-                let videoExtensions = [".mp4", ".mov", ".avi", ".webm", ".gif"]
-                let lowercaseFile = firstFile.lowercased()
+            // 미디어 파일 확장자 정의
+            let videoExtensions = [".mp4", ".mov", ".avi", ".mkv", ".wmv"]
+            let imageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
 
-                if videoExtensions.contains(where: { lowercaseFile.contains($0) }) {
-                    print("⚠️ [Community] Skipping video file: \(firstFile)")
-                    return nil
-                }
-
-                if firstFile.hasPrefix("http") {
-                    imageUrl = firstFile
-                } else {
-                    imageUrl = APIKey.baseURL + firstFile
-                }
-            } else {
-                // 파일이 없으면 건너뜀
+            // files 배열에서 첫 번째 미디어 파일(이미지 또는 동영상) 찾기
+            guard let mediaFile = post.files.first(where: { file in
+                let lowercaseFile = file.lowercased()
+                let isImage = imageExtensions.contains(where: { lowercaseFile.hasSuffix($0) })
+                let isVideo = videoExtensions.contains(where: { lowercaseFile.hasSuffix($0) })
+                return isImage || isVideo
+            }) else {
+                // 미디어 파일이 없으면 건너뜀
+                print("⚠️ [Community] No media file found in post: \(post.postId)")
                 return nil
             }
+
+            // 동영상 여부 확인
+            let isVideo = videoExtensions.contains(where: { mediaFile.lowercased().hasSuffix($0) })
+
+            // URL 생성
+            let mediaUrl: String
+            if mediaFile.hasPrefix("http") {
+                mediaUrl = mediaFile
+            } else {
+                mediaUrl = APIKey.baseURL + mediaFile
+            }
+
+            print("✅ [Community] Media file found - isVideo: \(isVideo), url: \(mediaUrl)")
 
             // 높이는 랜덤으로 설정 (폭포수 레이아웃용)
             let height = CGFloat.random(in: 220...320)
 
             return CommunityItem(
                 id: post.postId,
-                imageUrl: imageUrl,
+                imageUrl: mediaUrl,
+                isVideo: isVideo,
                 title: post.title,
                 userName: post.creator.nick,
                 likeCount: post.likeCount,
@@ -205,6 +213,7 @@ final class CommunityReactor: Reactor {
 struct CommunityItem {
     let id: String
     let imageUrl: String
+    let isVideo: Bool
     let title: String
     let userName: String
     let likeCount: Int

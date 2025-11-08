@@ -13,12 +13,10 @@ final class StoreHeaderView: UICollectionReusableView {
     static let reuseID = "StoreHeaderView"
 
     // MARK: - UI Components
-    private let logoImageView = UIImageView().then {
-        $0.contentMode = .scaleAspectFill
-        $0.clipsToBounds = true
-        $0.layer.cornerRadius = 30
-        $0.image = UIImage(named: "modimood_logo") // placeholder
-    }
+    private let logoImageView = ImageLoadView(
+        cornerRadius: 30,
+        contentMode: .scaleAspectFill
+    )
 
     private let titleLabel = UILabel().then {
         $0.font = .systemFont(ofSize: 20, weight: .bold)
@@ -106,7 +104,11 @@ final class StoreHeaderView: UICollectionReusableView {
 
     // MARK: - Configure
     func configure(with store: StoreDetailEntity) {
-        // TODO: logoImageView는 나중에 실제 이미지 로딩으로 대체
+        // 로고 이미지 로드 (storeImageUrls의 마지막 이미지)
+        if let lastImageUrl = store.storeImageUrls.last {
+            logoImageView.loadImage(from: lastImageUrl)
+        }
+
         titleLabel.text = store.name
 
         // pickCount를 표시 (만 단위로 변환)
@@ -115,7 +117,8 @@ final class StoreHeaderView: UICollectionReusableView {
         // 평점을 만족도처럼 표시 (5점 만점을 100점 만점으로 환산)
         let satisfaction = Int((store.totalRating / 5.0) * 100)
 
-        subtitleLabel.text = "마켓 찜 \(pickCountFormatted)  |  리뷰 \(store.totalReviewCount)  |  만족도 \(satisfaction)%"
+//        subtitleLabel.text = "마켓 찜  \(pickCountFormatted)  |  리뷰 \(store.totalReviewCount)  |  만족도 \(satisfaction)%"
+        subtitleLabel.text = "마켓 찜 201  |  리뷰 617  |  만족도 95%"
     }
 
     private func formatCount(_ count: Int) -> String {

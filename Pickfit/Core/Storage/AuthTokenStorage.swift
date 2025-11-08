@@ -9,14 +9,12 @@ import Foundation
 import KeychainSwift
 
 protocol AuthTokenStorage {
-    func readAccess() async -> String?
-    func readRefresh() async -> String?
-    func readUserId() async -> String?
-    func write(access: String, refresh: String?) async
-    func writeUserId(_ userId: String) async
-    func clear() async
-    func readAccessSync() -> String?
-    func readUserIdSync() -> String?
+    func readAccess() -> String?
+    func readRefresh() -> String?
+    func readUserId() -> String?
+    func write(access: String, refresh: String?)
+    func writeUserId(_ userId: String)
+    func clear()
 }
 
 @propertyWrapper
@@ -46,29 +44,29 @@ enum KeyChainKeys: String {
     case refreshToken
 }
 
-actor KeychainAuthStorage: AuthTokenStorage {
+final class KeychainAuthStorage: AuthTokenStorage {
     static let shared = KeychainAuthStorage()
 
     private let keychain = KeychainSwift()
 
     private init() {}
 
-    func readAccess() async -> String? {
+    func readAccess() -> String? {
         let token = keychain.get(KeyChainKeys.accessToken.rawValue)
-        
+
         print("token", token)
         return token
     }
 
-    func readRefresh() async -> String? {
+    func readRefresh() -> String? {
         keychain.get(KeyChainKeys.refreshToken.rawValue)
     }
 
-    func readUserId() async -> String? {
+    func readUserId() -> String? {
         keychain.get(KeyChainKeys.userId.rawValue)
     }
 
-    func write(access: String, refresh: String?) async {
+    func write(access: String, refresh: String?) {
         keychain.set(access, forKey: KeyChainKeys.accessToken.rawValue)
 
         if let r = refresh {
@@ -76,23 +74,13 @@ actor KeychainAuthStorage: AuthTokenStorage {
         }
     }
 
-    func writeUserId(_ userId: String) async {
+    func writeUserId(_ userId: String) {
         keychain.set(userId, forKey: KeyChainKeys.userId.rawValue)
     }
 
-    func clear() async {
+    func clear() {
         keychain.delete(KeyChainKeys.accessToken.rawValue)
         keychain.delete(KeyChainKeys.refreshToken.rawValue)
         keychain.delete(KeyChainKeys.userId.rawValue)
-    }
-
-    nonisolated func readAccessSync() -> String? {
-        let keychain = KeychainSwift()
-        return keychain.get(KeyChainKeys.accessToken.rawValue)
-    }
-
-    nonisolated func readUserIdSync() -> String? {
-        let keychain = KeychainSwift()
-        return keychain.get(KeyChainKeys.userId.rawValue)
     }
 }

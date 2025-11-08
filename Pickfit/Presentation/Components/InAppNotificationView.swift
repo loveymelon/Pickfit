@@ -2,7 +2,7 @@
 //  InAppNotificationView.swift
 //  Pickfit
 //
-//  Created by Claude on 10/19/25.
+//  Created by 김진수 on 10/19/25.
 //
 
 import UIKit
@@ -146,7 +146,7 @@ final class InAppNotificationView: UIView {
                 "SeSACKey": APIKey.sesacKey
             ]
 
-            if let accessToken = KeychainAuthStorage.shared.readAccessSync() {
+            if let accessToken = KeychainAuthStorage.shared.readAccess() {
                 headers["Authorization"] = accessToken
             }
 

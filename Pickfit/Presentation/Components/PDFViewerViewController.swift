@@ -2,7 +2,7 @@
 //  PDFViewerViewController.swift
 //  Pickfit
 //
-//  Created by Claude on 2025-10-20.
+//  Created by 김진수 on 2025-10-20.
 //
 
 import UIKit
@@ -119,7 +119,7 @@ final class PDFViewerViewController: UIViewController {
 
         // 인증 헤더 추가
         var request = URLRequest(url: pdfURL)
-        if let accessToken = KeychainAuthStorage.shared.readAccessSync() {
+        if let accessToken = KeychainAuthStorage.shared.readAccess() {
             request.setValue(accessToken, forHTTPHeaderField: "Authorization")
             print("🔑 [PDF Viewer] Added auth header")
         }

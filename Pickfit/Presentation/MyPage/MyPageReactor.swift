@@ -2,7 +2,7 @@
 //  MyPageReactor.swift
 //  Pickfit
 //
-//  Created by Claude on 10/12/25.
+//  Created by 김진수 on 10/12/25.
 //
 
 import Foundation
@@ -78,7 +78,7 @@ final class MyPageReactor: Reactor {
 
     private func fetchUserInfo() -> Observable<Mutation> {
         // KeychainAuthStorage에서 사용자 정보 가져오기
-        let userId = KeychainAuthStorage.shared.readUserIdSync() ?? "알 수 없음"
+        let userId = KeychainAuthStorage.shared.readUserId() ?? "알 수 없음"
 
         // TODO: 실제로는 서버에서 사용자 정보를 가져와야 함
         // 현재는 userId만 표시

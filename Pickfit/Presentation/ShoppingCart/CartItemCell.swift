@@ -160,7 +160,21 @@ final class CartItemCell: UITableViewCell {
     }
 
     func configure(with item: CartItem) {
-        productImageView.loadImage(from: item.menu.menuImageUrl)
+        // 로컬 이미지가 있으면 사용, 없으면 URL 로드 또는 회색 배경
+        let imageUrl = item.menu.menuImageUrl
+
+        if !imageUrl.isEmpty, UIImage(named: imageUrl) != nil {
+            // 로컬 에셋 이미지
+            productImageView.image = UIImage(named: imageUrl)
+        } else if imageUrl.hasPrefix("http") {
+            // 원격 URL 이미지
+            productImageView.loadImage(from: imageUrl)
+        } else {
+            // 이미지 없음 - 회색 배경
+            productImageView.image = nil
+            productImageView.backgroundColor = .systemGray5
+        }
+
         titleLabel.text = item.menu.name
         optionLabel.text = "\(item.color) / \(item.size)"
         currentQuantity = item.quantity
