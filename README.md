@@ -2,6 +2,8 @@
 
 iOS 의류 쇼핑몰 애플리케이션
 
+<img width="1151" height="449" alt="Image" src="https://github.com/user-attachments/assets/7febd115-3320-4d75-90f2-d665da034e03" />
+
 ## 앱의 기능
 
 - 소셜 로그인
